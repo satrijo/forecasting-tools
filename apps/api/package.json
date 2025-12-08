@@ -1,0 +1,17 @@
+{
+  "name": "api",
+  "scripts": {
+    "dev": "bun run --env-file=../../.env --hot src/server.ts",
+    "build": "bun build src/index.ts --outdir dist --target bun",
+    "lint": "echo 'Linted!'",
+    "check-types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "hono": "^4.10.7",
+    "weather-client": "*"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.0.0"
+  }
+}

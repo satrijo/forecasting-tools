@@ -1,0 +1,138 @@
+[
+  {
+    "label": "Bali",
+    "value": "PR017"
+  },
+  {
+    "label": "Banten",
+    "value": "PR014"
+  },
+  {
+    "label": "Bengkulu",
+    "value": "PR007"
+  },
+  {
+    "label": "DI Yogyakarta",
+    "value": "PR016"
+  },
+  {
+    "label": "DKI Jakarta",
+    "value": "PR011"
+  },
+  {
+    "label": "Gorontalo",
+    "value": "PR029"
+  },
+  {
+    "label": "Jambi",
+    "value": "PR006"
+  },
+  {
+    "label": "Jawa Barat",
+    "value": "PR012"
+  },
+  {
+    "label": "Jawa Tengah",
+    "value": "PR013"
+  },
+  {
+    "label": "Jawa Timur",
+    "value": "PR015"
+  },
+  {
+    "label": "Kalimantan Barat",
+    "value": "PR020"
+  },
+  {
+    "label": "Kalimantan Selatan",
+    "value": "PR022"
+  },
+  {
+    "label": "Kalimantan Tengah",
+    "value": "PR021"
+  },
+  {
+    "label": "Kalimantan Timur",
+    "value": "PR023"
+  },
+  {
+    "label": "Kalimantan Utara",
+    "value": "PR024"
+  },
+  {
+    "label": "Kepulauan Bangka Belitung",
+    "value": "PR009"
+  },
+  {
+    "label": "Kepulauan Riau",
+    "value": "PR010"
+  },
+  {
+    "label": "Lampung",
+    "value": "PR008"
+  },
+  {
+    "label": "Maluku",
+    "value": "PR031"
+  },
+  {
+    "label": "Maluku Utara",
+    "value": "PR032"
+  },
+  {
+    "label": "Nanggroe Aceh Darusalam",
+    "value": "PR001"
+  },
+  {
+    "label": "Nusa Tenggara Barat",
+    "value": "PR018"
+  },
+  {
+    "label": "Nusa Tenggara Timur",
+    "value": "PR019"
+  },
+  {
+    "label": "Papua",
+    "value": "PR033"
+  },
+  {
+    "label": "Papua Barat",
+    "value": "PR034"
+  },
+  {
+    "label": "Riau",
+    "value": "PR005"
+  },
+  {
+    "label": "Sulawesi Barat",
+    "value": "PR030"
+  },
+  {
+    "label": "Sulawesi Selatan",
+    "value": "PR027"
+  },
+  {
+    "label": "Sulawesi Tengah",
+    "value": "PR026"
+  },
+  {
+    "label": "Sulawesi Tenggara",
+    "value": "PR028"
+  },
+  {
+    "label": "Sulawesi Utara",
+    "value": "PR025"
+  },
+  {
+    "label": "Sumatera Barat",
+    "value": "PR003"
+  },
+  {
+    "label": "Sumatera Selatan",
+    "value": "PR004"
+  },
+  {
+    "label": "Sumatera Utara",
+    "value": "PR002"
+  }
+]

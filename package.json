@@ -1,7 +1,14 @@
 {
-  "name": "my-turborepo",
-  "description": "A barebones Turborepo example for working with Task Graphs.",
+  "name": "bmkg-tools",
+  "description": "BMKG Monorepo Tools",
   "private": true,
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "check-types": "turbo check-types",
+    "clean": "rm -rf node_modules apps/*/node_modules packages/*/node_modules .turbo apps/*/dist packages/*/dist"
+  },
   "devDependencies": {
     "turbo": "^2.6.3"
   },

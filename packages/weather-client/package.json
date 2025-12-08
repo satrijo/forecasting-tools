@@ -1,0 +1,27 @@
+{
+  "name": "weather-client",
+  "version": "0.0.0",
+  "description": "BMKG Weather Data Client (AWS & AWOS)",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./aws": "./src/aws/index.ts",
+    "./awos": "./src/awos/index.ts"
+  },
+  "scripts": {
+    "test": "bun test",
+    "type-check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.0.0"
+  },
+  "keywords": [
+    "bmkg",
+    "weather",
+    "aws",
+    "awos",
+    "meteorology"
+  ]
+}
