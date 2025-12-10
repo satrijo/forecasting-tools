@@ -7,7 +7,9 @@
   "exports": {
     ".": "./src/index.ts",
     "./aws": "./src/aws/index.ts",
-    "./awos": "./src/awos/index.ts"
+    "./awos": "./src/awos/index.ts",
+    "./geojson": "./src/geojson/index.ts",
+    "./weather": "./src/weather/index.ts"
   },
   "scripts": {
     "test": "bun test",
