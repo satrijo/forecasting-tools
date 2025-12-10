@@ -158,33 +158,129 @@ export function saveGeoJSON(
 }
 
 /**
- * Filter GeoJSON by province
+ * Filter GeoJSON locations by multiple criteria
+ * @param geojson - GeoJSON FeatureCollection
+ * @param options - Filter options
+ * @returns Filtered GeoJSON FeatureCollection
+ *
+ * @example
+ * // Jawa Tengah tapi tidak termasuk Banyumas dan Cilacap
+ * filter(geojson, {
+ *   province: "Jawa Tengah",
+ *   excludeKabupaten: ["Banyumas", "Cilacap"]
+ * })
+ *
+ * @example
+ * // Banyumas tapi tidak termasuk kecamatan Jatilawang
+ * filter(geojson, {
+ *   kabupaten: "Banyumas",
+ *   excludeKecamatan: ["Jatilawang"]
+ * })
  */
-export function filterByProvince(
+export function filter(
   geojson: GeoJSONCollection,
-  province: string,
+  options: {
+    province?: string;
+    kabupaten?: string;
+    kecamatan?: string;
+    type?: string;
+    excludeProvince?: string | string[];
+    excludeKabupaten?: string | string[];
+    excludeKecamatan?: string | string[];
+    excludeType?: string | string[];
+  } = {},
 ): GeoJSONCollection {
-  return {
-    type: "FeatureCollection",
-    features: geojson.features.filter(
-      (feature) =>
-        feature.properties.province.toLowerCase() === province.toLowerCase(),
-    ),
-  };
-}
+  const {
+    province,
+    kabupaten,
+    kecamatan,
+    type,
+    excludeProvince,
+    excludeKabupaten,
+    excludeKecamatan,
+    excludeType,
+  } = options;
 
-/**
- * Filter GeoJSON by type (pwx, etc)
- */
-export function filterByType(
-  geojson: GeoJSONCollection,
-  type: string,
-): GeoJSONCollection {
+  // Normalize exclude lists
+  const excludeProvinceList = excludeProvince
+    ? (Array.isArray(excludeProvince)
+        ? excludeProvince
+        : [excludeProvince]
+      ).map((p) => p.toLowerCase())
+    : [];
+
+  const excludeKabupatenList = excludeKabupaten
+    ? (Array.isArray(excludeKabupaten)
+        ? excludeKabupaten
+        : [excludeKabupaten]
+      ).map((k) => k.toLowerCase())
+    : [];
+
+  const excludeKecamatanList = excludeKecamatan
+    ? (Array.isArray(excludeKecamatan)
+        ? excludeKecamatan
+        : [excludeKecamatan]
+      ).map((kec) => kec.toLowerCase())
+    : [];
+
+  const excludeTypeList = excludeType
+    ? (Array.isArray(excludeType) ? excludeType : [excludeType]).map((t) =>
+        t.toLowerCase(),
+      )
+    : [];
+
   return {
     type: "FeatureCollection",
-    features: geojson.features.filter(
-      (feature) => feature.properties.type.toLowerCase() === type.toLowerCase(),
-    ),
+    features: geojson.features.filter((feature) => {
+      const props = feature.properties;
+      const featureProvince = props.province.toLowerCase();
+      const featureKabupaten = props.kabupaten.toLowerCase();
+      const featureKecamatan = props.kecamatan.toLowerCase();
+      const featureType = props.type.toLowerCase();
+
+      // Province filter
+      if (province && featureProvince !== province.toLowerCase()) {
+        return false;
+      }
+
+      // Kabupaten filter (partial match)
+      if (kabupaten && !featureKabupaten.includes(kabupaten.toLowerCase())) {
+        return false;
+      }
+
+      // Kecamatan filter (partial match)
+      if (kecamatan && !featureKecamatan.includes(kecamatan.toLowerCase())) {
+        return false;
+      }
+
+      // Type filter
+      if (type && featureType !== type.toLowerCase()) {
+        return false;
+      }
+
+      // Exclude filters
+      if (excludeProvinceList.includes(featureProvince)) {
+        return false;
+      }
+
+      if (
+        excludeKabupatenList.some((excl) => featureKabupaten.includes(excl))
+      ) {
+        return false;
+      }
+
+      if (
+        excludeKecamatanList.some((excl) => featureKecamatan.includes(excl))
+      ) {
+        return false;
+      }
+
+      if (excludeTypeList.includes(featureType)) {
+        return false;
+      }
+
+      return true;
+    }),
   };
 }
 

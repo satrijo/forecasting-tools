@@ -6,8 +6,7 @@
 
 import {
   toGeoJSON,
-  filterByProvince,
-  filterByType,
+  filter,
   filterByBoundingBox,
   saveGeoJSON,
 } from "./index.ts";
@@ -59,13 +58,13 @@ console.log();
 
 // Example 4: Filter by province
 console.log("=== Example 4: Filter by Province ===");
-const acehLocations = filterByProvince(allLocations, "Aceh");
+const acehLocations = filter(allLocations, { province: "Aceh" });
 console.log(`Aceh locations: ${acehLocations.features.length}`);
 console.log();
 
 // Example 5: Filter by type
 console.log("=== Example 5: Filter by Type ===");
-const pwxStations = filterByType(allLocations, "pwx");
+const pwxStations = filter(allLocations, { type: "pwx" });
 console.log(`PWX stations: ${pwxStations.features.length}`);
 console.log();
 
@@ -77,19 +76,74 @@ console.log();
 
 // Example 7: Combined filters (Aceh PWX stations)
 console.log("=== Example 7: Combined Filters (Aceh + PWX) ===");
-const acehPWX = filterByType(acehLocations, "pwx");
+const acehPWX = filter(allLocations, { province: "Aceh", type: "pwx" });
 console.log(`Aceh PWX stations: ${acehPWX.features.length}`);
 console.log();
 
-// Example 8: Display sample GeoJSON feature
-console.log("=== Example 8: Sample GeoJSON Feature ===");
+// Example 8: Province with exclude kabupatens
+console.log("=== Example 8: Province + Exclude Kabupatens ===");
+const jawaTengahFiltered = filter(allLocations, {
+  province: "Jawa Tengah",
+  excludeKabupaten: ["Banyumas", "Cilacap"],
+});
+console.log(
+  `Jawa Tengah (excluding Banyumas & Cilacap): ${jawaTengahFiltered.features.length}`,
+);
+
+// Check what we excluded
+const jawaTengahAll = filter(allLocations, { province: "Jawa Tengah" });
+const banyumas = filter(allLocations, {
+  province: "Jawa Tengah",
+  kabupaten: "Banyumas",
+});
+const cilacap = filter(allLocations, {
+  province: "Jawa Tengah",
+  kabupaten: "Cilacap",
+});
+console.log(`  - Total Jawa Tengah: ${jawaTengahAll.features.length}`);
+console.log(`  - Banyumas excluded: ${banyumas.features.length}`);
+console.log(`  - Cilacap excluded: ${cilacap.features.length}`);
+console.log();
+
+// Example 9: Multiple criteria at once
+console.log("=== Example 9: Multiple Criteria ===");
+const complexFilter = filter(allLocations, {
+  province: "Jawa Barat",
+  kabupaten: "Bandung",
+  excludeKabupaten: ["Bandung Barat"],
+  type: "pwx",
+});
+console.log(
+  `Jawa Barat, Bandung PWX (not Bandung Barat): ${complexFilter.features.length}`,
+);
+console.log();
+
+// Example 10: Kecamatan filtering
+console.log("=== Example 10: Kecamatan Filtering ===");
+const banyumasWithoutJatilawang = filter(allLocations, {
+  kabupaten: "Banyumas",
+  excludeKecamatan: ["Jatilawang"],
+});
+console.log(
+  `Banyumas without Jatilawang: ${banyumasWithoutJatilawang.features.length}`,
+);
+
+const purwokertoOnly = filter(allLocations, {
+  kabupaten: "Banyumas",
+  kecamatan: "Purwokerto",
+});
+console.log(`Purwokerto area only: ${purwokertoOnly.features.length}`);
+console.log();
+
+// Example 11: Display sample GeoJSON feature
+console.log("=== Example 11: Sample GeoJSON Feature ===");
 if (acehLocations.features.length > 0) {
   console.log(JSON.stringify(acehLocations.features[0], null, 2));
 }
 console.log();
 
-// Example 9: Save filtered data
-console.log("=== Example 9: Save Filtered Data ===");
+// Example 12: Save filtered data
+console.log("=== Example 12: Save Filtered Data ===");
 const outputPath = "./aceh-sample.geojson";
 saveGeoJSON(acehLocations, outputPath);
 console.log(`✅ Saved Aceh locations to: ${outputPath}`);

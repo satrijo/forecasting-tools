@@ -34,9 +34,8 @@ bun src/geojson/examples.ts
 ```typescript
 import {
   toGeoJSON,
+  filter,
   saveGeoJSON,
-  filterByProvince,
-  filterByType,
   filterByBoundingBox,
 } from "weather-client/geojson";
 ```
@@ -62,24 +61,46 @@ const geojson = toGeoJSON("./custom-locations.json");
 const geojson = toGeoJSON();
 ```
 
-### Filter by Province
+### Unified Filter Function
+
+The `filter()` function provides flexible filtering with multiple options:
 
 ```typescript
-import { toGeoJSON, filterByProvince } from "weather-client/geojson";
+import { toGeoJSON, filter } from "weather-client/geojson";
 
 const geojson = toGeoJSON();
-const acehData = filterByProvince(geojson, "aceh");
-console.log(`Aceh locations: ${acehData.features.length}`);
-```
 
-### Filter by Type
+// Filter by province
+const aceh = filter(geojson, { province: "Aceh" });
 
-```typescript
-import { toGeoJSON, filterByType } from "weather-client/geojson";
+// Filter by kabupaten
+const banyumas = filter(geojson, { kabupaten: "Banyumas" });
 
-const geojson = toGeoJSON();
-const pwxStations = filterByType(geojson, "pwx");
-console.log(`PWX stations: ${pwxStations.features.length}`);
+// Filter by kecamatan
+const purwokerto = filter(geojson, {
+  kabupaten: "Banyumas",
+  kecamatan: "Purwokerto",
+});
+
+// Province excluding kabupatens
+const jawaTengah = filter(geojson, {
+  province: "Jawa Tengah",
+  excludeKabupaten: ["Banyumas", "Cilacap"],
+});
+
+// Kabupaten excluding kecamatans
+const banyumasFiltered = filter(geojson, {
+  kabupaten: "Banyumas",
+  excludeKecamatan: ["Jatilawang"],
+});
+
+// Multiple criteria
+const complex = filter(geojson, {
+  province: "Jawa Barat",
+  kabupaten: "Bandung",
+  excludeKabupaten: ["Bandung Barat"],
+  type: "pwx",
+});
 ```
 
 ### Filter by Bounding Box
@@ -96,28 +117,22 @@ console.log(`Java area locations: ${javaLocations.features.length}`);
 ### Combined Filters
 
 ```typescript
-import {
-  toGeoJSON,
-  filterByProvince,
-  filterByType,
-  saveGeoJSON,
-} from "weather-client/geojson";
+import { toGeoJSON, filter, saveGeoJSON } from "weather-client/geojson";
 
 const geojson = toGeoJSON();
-const acehData = filterByProvince(geojson, "aceh");
-const acehPWX = filterByType(acehData, "pwx");
 
-saveGeoJSON(acehPWX, "./output/aceh-pwx.geojson");
+const filtered = filter(geojson, {
+  province: "Aceh",
+  type: "pwx",
+});
+
+saveGeoJSON(filtered, "./output/aceh-pwx.geojson");
 ```
 
 ### Real-world Example: API to GeoJSON
 
 ```typescript
-import {
-  toGeoJSON,
-  filterByProvince,
-  saveGeoJSON,
-} from "weather-client/geojson";
+import { toGeoJSON, filter, saveGeoJSON } from "weather-client/geojson";
 
 async function fetchAndConvert() {
   // Fetch from BMKG API
@@ -127,13 +142,16 @@ async function fetchAndConvert() {
   // Convert to GeoJSON
   const geojson = toGeoJSON(locations);
 
-  // Filter by province
-  const jakartaStations = filterByProvince(geojson, "DKI Jakarta");
+  // Filter by province, exclude specific kabupatens
+  const jakartaFiltered = filter(geojson, {
+    province: "DKI Jakarta",
+    excludeKabupaten: ["Jakarta Utara"],
+  });
 
   // Save filtered data
-  saveGeoJSON(jakartaStations, "./jakarta-stations.geojson");
+  saveGeoJSON(jakartaFiltered, "./jakarta-stations.geojson");
 
-  return jakartaStations;
+  return jakartaFiltered;
 }
 ```
 
@@ -160,6 +178,53 @@ const geojson = toGeoJSON("./locations.json");
 
 // From default file
 const geojson = toGeoJSON();
+```
+
+### `filter(geojson, options): GeoJSONCollection`
+
+**NEW unified filter function** - Filter with multiple criteria and exclusions.
+
+Options:
+
+- `province?: string` - Filter by province (exact match, case-insensitive)
+- `kabupaten?: string` - Filter by kabupaten (partial match, case-insensitive)
+- `kecamatan?: string` - Filter by kecamatan (partial match, case-insensitive)
+- `type?: string` - Filter by station type (exact match, case-insensitive)
+- `excludeProvince?: string | string[]` - Exclude provinces
+- `excludeKabupaten?: string | string[]` - Exclude kabupatens
+- `excludeKecamatan?: string | string[]` - Exclude kecamatans
+- `excludeType?: string | string[]` - Exclude types
+
+**Examples:**
+
+```typescript
+// Province only
+filter(geojson, { province: "Jawa Tengah" });
+
+// Province excluding kabupatens
+filter(geojson, {
+  province: "Jawa Tengah",
+  excludeKabupaten: ["Banyumas", "Cilacap"],
+});
+
+// Kabupaten excluding kecamatans
+filter(geojson, {
+  kabupaten: "Banyumas",
+  excludeKecamatan: ["Jatilawang"],
+});
+
+// Kecamatan only
+filter(geojson, {
+  kabupaten: "Banyumas",
+  kecamatan: "Purwokerto",
+});
+
+// Multiple criteria
+filter(geojson, {
+  province: "Jawa Barat",
+  type: "pwx",
+  excludeKabupaten: ["Bandung Barat"],
+});
 ```
 
 ### `loadLocationData(filePath?: string): any[]`
@@ -189,22 +254,6 @@ Save GeoJSON to file.
 
 - `geojson`: GeoJSON FeatureCollection to save
 - `outputPath`: Output file path
-
-### `filterByProvince(geojson: GeoJSONCollection, province: string): GeoJSONCollection`
-
-Filter GeoJSON features by province name (case-insensitive).
-
-- `geojson`: GeoJSON FeatureCollection
-- `province`: Province name to filter
-- Returns: Filtered GeoJSON FeatureCollection
-
-### `filterByType(geojson: GeoJSONCollection, type: string): GeoJSONCollection`
-
-Filter GeoJSON features by station type (case-insensitive).
-
-- `geojson`: GeoJSON FeatureCollection
-- `type`: Station type to filter (e.g., "pwx")
-- Returns: Filtered GeoJSON FeatureCollection
 
 ### `filterByBoundingBox(geojson, minLon, minLat, maxLon, maxLat): GeoJSONCollection`
 

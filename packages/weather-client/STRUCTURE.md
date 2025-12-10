@@ -65,8 +65,20 @@ bun src/geojson/examples.ts
 **Main Functions:**
 
 ```typescript
-// Fungsi utama - flexible conversion
+// Main conversion function - flexible input
 export function toGeoJSON(source?: any[] | string): GeoJSONCollection
+
+// Unified filter function with all options
+export function filter(geojson: GeoJSONCollection, options: {
+  province?: string;
+  kabupaten?: string;
+  kecamatan?: string;
+  type?: string;
+  excludeProvince?: string | string[];
+  excludeKabupaten?: string | string[];
+  excludeKecamatan?: string | string[];
+  excludeType?: string | string[];
+}): GeoJSONCollection
 
 // Helper functions (used internally)
 export function loadLocationData(filePath?: string): any[]
@@ -74,31 +86,32 @@ export function parseWeatherData(weatherData: string[] | null): WeatherData | nu
 export function toGeoJSONFeature(location: any[]): GeoJSONFeature | null
 export function saveGeoJSON(geojson: GeoJSONCollection, outputPath: string): void
 
-// Filter functions
-export function filterByProvince(geojson: GeoJSONCollection, province: string): GeoJSONCollection
-export function filterByType(geojson: GeoJSONCollection, type: string): GeoJSONCollection
+// Other filters
 export function filterByBoundingBox(...): GeoJSONCollection
 ```
 
 **Usage Examples:**
 
 ```typescript
-import { toGeoJSON, filterByProvince } from "weather-client/geojson";
+import { toGeoJSON, filter } from "weather-client/geojson";
 
-// Dari API/fetch (array)
+// From API/fetch (array)
 const locations = await fetch("https://api.example.com/locations").then((r) =>
   r.json(),
 );
 const geojson = toGeoJSON(locations);
 
-// Dari file
+// From file
 const geojson = toGeoJSON("./locations.json");
 
-// Dari default file
+// From default file
 const geojson = toGeoJSON();
 
-// Filter
-const aceh = filterByProvince(geojson, "Aceh");
+// Filter with multiple options
+const filtered = filter(geojson, {
+  province: "Jawa Tengah",
+  excludeKabupaten: ["Banyumas", "Cilacap"],
+});
 ```
 
 ---
