@@ -9,8 +9,6 @@ root.get("/", (c) => {
     version: "1.0.0",
     documentation: {
       scalar: "/docs",
-      swagger: "/swagger",
-      redoc: "/redoc",
       openapi: "/openapi.yaml",
     },
     endpoints: {
@@ -32,7 +30,8 @@ root.get("/", (c) => {
         nowcasting: "/public/nowcasting?code=CJH",
         nowcastingXML: "/public/nowcasting?type=xml&province=jawa_tengah",
         weather: "/public/weather",
-        weatherFiltered: "/public/weather?province=jawa_tengah&kabupaten=banyumas",
+        weatherFiltered:
+          "/public/weather?province=jawa_tengah&kabupaten=banyumas",
       },
     },
     stationTypes: {
@@ -41,7 +40,8 @@ root.get("/", (c) => {
       arg: "Automatic Rain Gauge - Rainfall only",
       asrs: "Automatic Solar Radiation Station - Solar radiation data",
       soil: "Soil Moisture Station - Soil moisture & temperature",
-      iklimmikro: "Micro Climate Station - Multi-level (4m, 7m, 10m) measurements",
+      iklimmikro:
+        "Micro Climate Station - Multi-level (4m, 7m, 10m) measurements",
     },
   });
 });

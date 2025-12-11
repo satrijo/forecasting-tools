@@ -83,16 +83,23 @@ REST API untuk mengambil data cuaca real-time dari stasiun AWS/ARG BMKG.
 
 **Endpoints:**
 
-- `GET /` - API info
-- `GET /aws` - Fetch weather data
+| Endpoint                 | Description                       |
+| ------------------------ | --------------------------------- |
+| `GET /`                  | API info & documentation links    |
+| `GET /aws`               | AWS/ARG station weather data      |
+| `GET /public`            | Public weather API info           |
+| `GET /public/nowcasting` | Nowcasting data (signature/XML)   |
+| `GET /public/weather`    | Public weather forecast (GeoJSON) |
+| `GET /docs`              | API documentation (Scalar UI)     |
+| `GET /openapi.yaml`      | OpenAPI 3.1.0 spec                |
 
 **Features:**
 
-- ✅ Fetch by Province
-- ✅ Fetch by City (dengan exclude & match mode)
-- ✅ Fetch by Radius (Haversine formula)
-- ✅ Fetch by Station IDs
-- ✅ Filter by Type (AWS/ARG)
+- ✅ Fetch by Province, City, Radius, Station IDs
+- ✅ Filter by Type (AWS, AAWS, ARG, ASRS, Soil, Iklimmikro)
+- ✅ GeoJSON output format
+- ✅ Consistent REST response format (`success` field)
+- ✅ OpenAPI 3.1.0 documentation
 
 **Dokumentasi lengkap**: [`apps/api/README.md`](apps/api/README.md)
 
@@ -110,35 +117,61 @@ Frontend aplikasi untuk visualisasi data cuaca (coming soon).
 
 ### weather-client (`packages/weather-client`)
 
-Shared library untuk fetch data dari BMKG API.
+Shared library untuk fetch dan konversi data BMKG.
 
-**Exports:**
+**Modules:**
 
-- `AWSDataFetcher` - Main class untuk fetch data
-- `BMKGAuth` - Authentication handler
+| Module    | Description                  |
+| --------- | ---------------------------- |
+| `aws`     | AWS/ARG station data fetcher |
+| `public`  | Public weather data fetcher  |
+| `geojson` | GeoJSON converter & filters  |
 
-**Methods:**
+**AWS Data Fetcher:**
 
 ```typescript
-// Fetch by province
-await fetcher.fetchDataByProvince(provinceCodes, type);
+import { AWSDataFetcher, BMKGAuth } from "weather-client";
 
-// Fetch by city
-await fetcher.fetchDataByCity(cityNames, type, matchMode, excludeCity);
+const auth = new BMKGAuth(username, password);
+const fetcher = new AWSDataFetcher(auth);
 
-// Fetch by radius
-await fetcher.fetchDataByRadius(lat, lon, radius, type);
-
-// Fetch by station IDs
-await fetcher.fetchMultipleStations(
-  stationIds,
-  defaultType,
-  includeLocationInfo,
-);
-
-// Fetch single station
-await fetcher.fetchStationData(stationId, type, includeLocationInfo);
+await fetcher.fetchDataByProvince(["PR013"], "aws");
+await fetcher.fetchDataByCity("banyumas", "aws");
+await fetcher.fetchDataByRadius(-7.43, 109.24, 50, "aws");
 ```
+
+**GeoJSON Converter:**
+
+```typescript
+import {
+  // Public weather (PWX)
+  publicToGeoJSON,
+  filterPublicGeoJSON,
+  filterPublicByBoundingBox,
+
+  // AWS stations
+  awsToGeoJSON,
+  awsToGeoJSONFeature,
+} from "weather-client";
+
+// Public weather
+const geojson = publicToGeoJSON(pwxData);
+const filtered = filterPublicGeoJSON(geojson, { province: "Jawa Tengah" });
+
+// AWS stations
+const awsGeoJSON = awsToGeoJSON(stations);
+```
+
+**Station Types:**
+
+| Type         | Description                        |
+| ------------ | ---------------------------------- |
+| `aws`        | Automatic Weather Station          |
+| `aaws`       | Advanced AWS                       |
+| `arg`        | Automatic Rain Gauge               |
+| `asrs`       | Automatic Solar Radiation Station  |
+| `soil`       | Soil Moisture Station              |
+| `iklimmikro` | Microclimate Station (multi-level) |
 
 ## 💻 Development
 
@@ -251,7 +284,20 @@ bun run check-types  # Type checking
 
 ## 📚 Documentation
 
-- **API Documentation**: [`apps/api/README.md`](apps/api/README.md)
+### API
+
+- **API README**: [`apps/api/README.md`](apps/api/README.md)
+- **OpenAPI Spec**: [`apps/api/openapi.yaml`](apps/api/openapi.yaml)
+- **Interactive Docs**: `http://localhost:3000/docs` (Scalar UI)
+
+### Library
+
+- **AWS Fetcher**: [`packages/weather-client/src/aws/README.md`](packages/weather-client/src/aws/README.md)
+- **GeoJSON Converter**: [`packages/weather-client/src/geojson/README.md`](packages/weather-client/src/geojson/README.md)
+- **AWS to GeoJSON**: [`packages/weather-client/src/geojson/AWS.md`](packages/weather-client/src/geojson/AWS.md)
+
+### Data
+
 - **Province Codes**: [`packages/weather-client/src/aws/province.json`](packages/weather-client/src/aws/province.json)
 - **Station Data**: [`packages/weather-client/src/aws/location.json`](packages/weather-client/src/aws/location.json)
 
