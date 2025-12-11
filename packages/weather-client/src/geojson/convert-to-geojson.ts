@@ -8,7 +8,7 @@
  */
 
 import path from "path";
-import { toGeoJSON, saveGeoJSON } from "./index.ts";
+import { publicToGeoJSON, saveGeoJSON } from "./index.ts";
 
 const args = process.argv.slice(2);
 if (args.length < 2) {
@@ -21,7 +21,7 @@ if (args.length < 2) {
 const inputPath = path.resolve(args[0]!);
 const outputPath = path.resolve(args[1]!);
 
-const geojson = toGeoJSON(inputPath);
+const geojson = publicToGeoJSON(inputPath);
 saveGeoJSON(geojson, outputPath);
 
 console.log(`✅ Converted ${geojson.features.length} locations to GeoJSON`);

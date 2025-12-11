@@ -63,9 +63,9 @@ export function parseWeatherData(
 }
 
 /**
- * Convert single location to GeoJSON feature
+ * Convert single public weather location to GeoJSON feature
  */
-export function toGeoJSONFeature(location: any[]): GeoJSONFeature | null {
+export function publicToGeoJSONFeature(location: any[]): GeoJSONFeature | null {
   if (!location || location.length === 0) {
     return null;
   }
@@ -101,28 +101,28 @@ export function toGeoJSONFeature(location: any[]): GeoJSONFeature | null {
 }
 
 /**
- * Convert locations to GeoJSON FeatureCollection
+ * Convert public weather locations to GeoJSON FeatureCollection
  *
  * @param source - Array of locations OR file path string
  * @returns GeoJSON FeatureCollection
  *
  * @example
- * // From array (e.g., API response, database, etc)
- * const data = await fetchFromAPI();
- * const geojson = toGeoJSON(data);
+ * // From array (e.g., API response from getPwxDarat())
+ * const data = await publicWeather.getPwxDarat();
+ * const geojson = publicToGeoJSON(data);
  *
  * @example
  * // From file
- * const geojson = toGeoJSON("./locations.json");
+ * const geojson = publicToGeoJSON("./locations.json");
  */
-export function toGeoJSON(source: any[] | string): GeoJSONCollection {
+export function publicToGeoJSON(source: any[] | string): GeoJSONCollection {
   // If string, load from file
   const locations =
     typeof source === "string" ? loadLocationData(source) : source;
 
   // Convert to GeoJSON
   const features = locations
-    .map(toGeoJSONFeature)
+    .map(publicToGeoJSONFeature)
     .filter((feature): feature is GeoJSONFeature => feature !== null);
 
   return {
@@ -142,26 +142,26 @@ export function saveGeoJSON(
 }
 
 /**
- * Filter GeoJSON locations by multiple criteria
- * @param geojson - GeoJSON FeatureCollection
+ * Filter public weather GeoJSON by multiple criteria
+ * @param geojson - GeoJSON FeatureCollection from publicToGeoJSON()
  * @param options - Filter options
  * @returns Filtered GeoJSON FeatureCollection
  *
  * @example
  * // Jawa Tengah tapi tidak termasuk Banyumas dan Cilacap
- * filter(geojson, {
+ * filterPublicGeoJSON(geojson, {
  *   province: "Jawa Tengah",
  *   excludeKabupaten: ["Banyumas", "Cilacap"]
  * })
  *
  * @example
  * // Banyumas tapi tidak termasuk kecamatan Jatilawang
- * filter(geojson, {
+ * filterPublicGeoJSON(geojson, {
  *   kabupaten: "Banyumas",
  *   excludeKecamatan: ["Jatilawang"]
  * })
  */
-export function filter(
+export function filterPublicGeoJSON(
   geojson: GeoJSONCollection,
   options: {
     province?: string;
@@ -269,9 +269,9 @@ export function filter(
 }
 
 /**
- * Filter GeoJSON by bounding box
+ * Filter public weather GeoJSON by bounding box
  */
-export function filterByBoundingBox(
+export function filterPublicByBoundingBox(
   geojson: GeoJSONCollection,
   minLon: number,
   minLat: number,

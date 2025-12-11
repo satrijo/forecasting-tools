@@ -15,6 +15,18 @@ info:
     ## Format Response
     - **JSON** (default) - Format standar dengan metadata
     - **GeoJSON** - Format RFC 7946 untuk mapping/visualisasi
+    
+    ## Client Library
+    Gunakan `weather-client` package untuk konversi data:
+    
+    **Public Weather:**
+    - `publicToGeoJSON()` - Convert ke GeoJSON
+    - `filterPublicGeoJSON()` - Filter by province/kabupaten/kecamatan
+    - `filterPublicByBoundingBox()` - Filter by bounding box
+    
+    **AWS Stations:**
+    - `awsToGeoJSON()` - Convert ke GeoJSON
+    - `awsToGeoJSONFeature()` - Convert single station
   version: 1.0.0
   contact:
     name: BMKG Tools

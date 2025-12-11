@@ -6,16 +6,16 @@
 
 import path from "path";
 import {
-  toGeoJSON,
-  filter,
-  filterByBoundingBox,
+  publicToGeoJSON,
+  filterPublicGeoJSON,
+  filterPublicByBoundingBox,
   saveGeoJSON,
 } from "./index.ts";
 
 // Example 1: Load from file
 console.log("=== Example 1: Load from File ===");
 const locationPath = path.join(import.meta.dir, "../public/location.json");
-const allLocations = toGeoJSON(locationPath);
+const allLocations = publicToGeoJSON(locationPath);
 console.log(`Total locations: ${allLocations.features.length}`);
 console.log();
 
@@ -45,37 +45,37 @@ const mockAPIData = [
     "pwx",
   ],
 ];
-const apiGeoJSON = toGeoJSON(mockAPIData);
+const apiGeoJSON = publicToGeoJSON(mockAPIData);
 console.log(`API data converted: ${apiGeoJSON.features.length} locations`);
 console.log();
 
 // Example 3: Filter by province
 console.log("=== Example 3: Filter by Province ===");
-const acehLocations = filter(allLocations, { province: "Aceh" });
+const acehLocations = filterPublicGeoJSON(allLocations, { province: "Aceh" });
 console.log(`Aceh locations: ${acehLocations.features.length}`);
 console.log();
 
 // Example 4: Filter by type
 console.log("=== Example 4: Filter by Type ===");
-const pwxStations = filter(allLocations, { type: "pwx" });
+const pwxStations = filterPublicGeoJSON(allLocations, { type: "pwx" });
 console.log(`PWX stations: ${pwxStations.features.length}`);
 console.log();
 
 // Example 5: Filter by bounding box (Java area)
 console.log("=== Example 5: Filter by Bounding Box (Java) ===");
-const javaLocations = filterByBoundingBox(allLocations, 105, -8, 115, -5);
+const javaLocations = filterPublicByBoundingBox(allLocations, 105, -8, 115, -5);
 console.log(`Java area locations: ${javaLocations.features.length}`);
 console.log();
 
 // Example 6: Combined filters (Aceh PWX stations)
 console.log("=== Example 6: Combined Filters (Aceh + PWX) ===");
-const acehPWX = filter(allLocations, { province: "Aceh", type: "pwx" });
+const acehPWX = filterPublicGeoJSON(allLocations, { province: "Aceh", type: "pwx" });
 console.log(`Aceh PWX stations: ${acehPWX.features.length}`);
 console.log();
 
 // Example 7: Province with exclude kabupatens
 console.log("=== Example 7: Province + Exclude Kabupatens ===");
-const jawaTengahFiltered = filter(allLocations, {
+const jawaTengahFiltered = filterPublicGeoJSON(allLocations, {
   province: "Jawa Tengah",
   excludeKabupaten: ["Banyumas", "Cilacap"],
 });
@@ -84,12 +84,12 @@ console.log(
 );
 
 // Check what we excluded
-const jawaTengahAll = filter(allLocations, { province: "Jawa Tengah" });
-const banyumas = filter(allLocations, {
+const jawaTengahAll = filterPublicGeoJSON(allLocations, { province: "Jawa Tengah" });
+const banyumas = filterPublicGeoJSON(allLocations, {
   province: "Jawa Tengah",
   kabupaten: "Banyumas",
 });
-const cilacap = filter(allLocations, {
+const cilacap = filterPublicGeoJSON(allLocations, {
   province: "Jawa Tengah",
   kabupaten: "Cilacap",
 });
@@ -100,7 +100,7 @@ console.log();
 
 // Example 8: Multiple criteria at once
 console.log("=== Example 8: Multiple Criteria ===");
-const complexFilter = filter(allLocations, {
+const complexFilter = filterPublicGeoJSON(allLocations, {
   province: "Jawa Barat",
   kabupaten: "Bandung",
   excludeKabupaten: ["Bandung Barat"],
@@ -113,7 +113,7 @@ console.log();
 
 // Example 9: Kecamatan filtering
 console.log("=== Example 9: Kecamatan Filtering ===");
-const banyumasWithoutJatilawang = filter(allLocations, {
+const banyumasWithoutJatilawang = filterPublicGeoJSON(allLocations, {
   kabupaten: "Banyumas",
   excludeKecamatan: ["Jatilawang"],
 });
@@ -121,7 +121,7 @@ console.log(
   `Banyumas without Jatilawang: ${banyumasWithoutJatilawang.features.length}`,
 );
 
-const purwokertoOnly = filter(allLocations, {
+const purwokertoOnly = filterPublicGeoJSON(allLocations, {
   kabupaten: "Banyumas",
   kecamatan: "Purwokerto",
 });

@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { PublicWeather, toGeoJSON, filter } from "weather-client";
+import { PublicWeather, publicToGeoJSON, filterPublicGeoJSON } from "weather-client";
 
 const publicRoute = new Hono();
 
@@ -120,10 +120,10 @@ publicRoute.get("/weather", async (c) => {
     const rawData = (await publicWeather.getPwxDarat()) as any[];
 
     // Always convert to GeoJSON first for filtering
-    const geojson = toGeoJSON(rawData);
+    const geojson = publicToGeoJSON(rawData);
 
     // Apply filters
-    const filteredGeoJSON = filter(geojson, {
+    const filteredGeoJSON = filterPublicGeoJSON(geojson, {
       province: provinceParam ? provinceParam.replace(/_/g, " ") : undefined,
       kabupaten: kabupatenParam ? kabupatenParam.replace(/_/g, " ") : undefined,
       kecamatan: kecamatanParam ? kecamatanParam.replace(/_/g, " ") : undefined,

@@ -7,6 +7,7 @@ Convert location data to GeoJSON format with filtering capabilities.
 - `index.ts` - Main library with all conversion functions
 - `convert-to-geojson.ts` - CLI script to generate GeoJSON file
 - `examples.ts` - Comprehensive usage examples
+- `AWS.md` - Documentation for AWS station conversion
 - `README.md` - This documentation
 
 ## Quick Start
@@ -15,7 +16,7 @@ Convert location data to GeoJSON format with filtering capabilities.
 
 ```bash
 # Generate location.geojson from location.json
-bun src/geojson/convert-to-geojson.ts
+bun src/geojson/convert-to-geojson.ts <input.json> <output.geojson>
 
 # Run examples
 bun src/geojson/examples.ts
@@ -23,79 +24,87 @@ bun src/geojson/examples.ts
 
 ## Features
 
-- Convert location data to standard GeoJSON FeatureCollection
-- Parse weather data into structured objects
-- Filter by province, type, or bounding box
-- Save GeoJSON to files
-- Type-safe TypeScript interfaces
+### Public Weather Data (PWX)
+- `publicToGeoJSON()` - Convert public weather data to GeoJSON
+- `publicToGeoJSONFeature()` - Convert single location
+- `filterPublicGeoJSON()` - Filter by province, kabupaten, kecamatan
+- `filterPublicByBoundingBox()` - Filter by bounding box
+
+### AWS Station Data
+- `awsToGeoJSON()` - Convert AWS stations to GeoJSON
+- `awsToGeoJSONFeature()` - Convert single station
+- `awsToGeoJSONString()` - Convert to JSON string
 
 ## Installation
 
 ```typescript
 import {
-  toGeoJSON,
-  filter,
+  // Public weather functions
+  publicToGeoJSON,
+  publicToGeoJSONFeature,
+  filterPublicGeoJSON,
+  filterPublicByBoundingBox,
   saveGeoJSON,
-  filterByBoundingBox,
-} from "weather-client/geojson";
+  
+  // AWS station functions
+  awsToGeoJSON,
+  awsToGeoJSONFeature,
+  awsToGeoJSONString,
+} from "weather-client";
 ```
 
 ## Usage Examples
 
-### Basic Conversion
+### Public Weather Data
+
+#### Basic Conversion
 
 ```typescript
-import { toGeoJSON } from "weather-client/geojson";
+import { publicToGeoJSON } from "weather-client";
 
-// From array (API response, database, etc)
-const locations = await fetch("https://api.example.com/locations").then((r) =>
-  r.json(),
-);
-const geojson = toGeoJSON(locations);
+// From array (API response from getPwxDarat())
+const publicWeather = new PublicWeather();
+const locations = await publicWeather.getPwxDarat();
+const geojson = publicToGeoJSON(locations);
 console.log(`Total locations: ${geojson.features.length}`);
 
 // From file
-const geojson = toGeoJSON("./custom-locations.json");
-
-// From default file (../weather/location.json)
-const geojson = toGeoJSON();
+const geojson = publicToGeoJSON("./locations.json");
 ```
 
-### Unified Filter Function
-
-The `filter()` function provides flexible filtering with multiple options:
+#### Filter Public Weather GeoJSON
 
 ```typescript
-import { toGeoJSON, filter } from "weather-client/geojson";
+import { publicToGeoJSON, filterPublicGeoJSON } from "weather-client";
 
-const geojson = toGeoJSON();
+const geojson = publicToGeoJSON(locations);
 
 // Filter by province
-const aceh = filter(geojson, { province: "Aceh" });
+const aceh = filterPublicGeoJSON(geojson, { province: "Aceh" });
 
 // Filter by kabupaten
-const banyumas = filter(geojson, { kabupaten: "Banyumas" });
+const banyumas = filterPublicGeoJSON(geojson, { kabupaten: "Banyumas" });
 
 // Filter by kecamatan
-const purwokerto = filter(geojson, {
+const purwokerto = filterPublicGeoJSON(geojson, {
   kabupaten: "Banyumas",
   kecamatan: "Purwokerto",
 });
 
 // Province excluding kabupatens
-const jawaTengah = filter(geojson, {
+const jawaTengah = filterPublicGeoJSON(geojson, {
   province: "Jawa Tengah",
   excludeKabupaten: ["Banyumas", "Cilacap"],
 });
 
 // Kabupaten excluding kecamatans
-const banyumasFiltered = filter(geojson, {
+const banyumasFiltered = filterPublicGeoJSON(geojson, {
   kabupaten: "Banyumas",
   excludeKecamatan: ["Jatilawang"],
 });
 
 // Multiple criteria
-const complex = filter(geojson, {
+const complex = filterPublicGeoJSON(geojson, {
   province: "Jawa Barat",
   kabupaten: "Bandung",
   excludeKabupaten: ["Bandung Barat"],
@@ -103,89 +112,63 @@ const complex = filter(geojson, {
 });
 ```
 
-### Filter by Bounding Box
+#### Filter by Bounding Box
 
 ```typescript
-import { toGeoJSON, filterByBoundingBox } from "weather-client/geojson";
+import { publicToGeoJSON, filterPublicByBoundingBox } from "weather-client";
 
-const geojson = toGeoJSON();
+const geojson = publicToGeoJSON(locations);
+
 // Filter locations in Java area
-const javaLocations = filterByBoundingBox(geojson, 105, -8, 115, -5);
+const javaLocations = filterPublicByBoundingBox(geojson, 105, -8, 115, -5);
 console.log(`Java area locations: ${javaLocations.features.length}`);
 ```
 
-### Combined Filters
+### AWS Station Data
 
 ```typescript
-import { toGeoJSON, filter, saveGeoJSON } from "weather-client/geojson";
+import { awsToGeoJSON, awsToGeoJSONString } from "weather-client";
 
-const geojson = toGeoJSON();
+// Convert AWS stations to GeoJSON
+const geojson = awsToGeoJSON(stations);
 
-const filtered = filter(geojson, {
-  province: "Aceh",
-  type: "pwx",
-});
-
-saveGeoJSON(filtered, "./output/aceh-pwx.geojson");
+// Convert to JSON string
+const jsonString = awsToGeoJSONString(stations, true); // pretty print
 ```
 
-### Real-world Example: API to GeoJSON
-
-```typescript
-import { toGeoJSON, filter, saveGeoJSON } from "weather-client/geojson";
-
-async function fetchAndConvert() {
-  // Fetch from BMKG API
-  const response = await fetch("https://api.bmkg.go.id/locations");
-  const locations = await response.json();
-
-  // Convert to GeoJSON
-  const geojson = toGeoJSON(locations);
-
-  // Filter by province, exclude specific kabupatens
-  const jakartaFiltered = filter(geojson, {
-    province: "DKI Jakarta",
-    excludeKabupaten: ["Jakarta Utara"],
-  });
-
-  // Save filtered data
-  saveGeoJSON(jakartaFiltered, "./jakarta-stations.geojson");
-
-  return jakartaFiltered;
-}
-```
+> **See [AWS.md](./AWS.md) for complete AWS documentation**
 
 ## API Reference
 
-### `toGeoJSON(source?: any[] | string): GeoJSONCollection`
+### Public Weather Functions
 
-**Main conversion function** - Flexible input: array, file path, or default.
+#### `publicToGeoJSON(source: any[] | string): GeoJSONCollection`
 
-- `source` (optional):
-  - Array of location data (from API/fetch/database)
-  - File path string to load from
-  - Omit to load default file (`../weather/location.json`)
+Convert public weather locations to GeoJSON FeatureCollection.
+
+- `source`: Array of location data OR file path string
 - Returns: GeoJSON FeatureCollection
-
-**Examples:**
 
 ```typescript
 // From array (API response)
-const geojson = toGeoJSON(locationArray);
+const geojson = publicToGeoJSON(locationArray);
 
 // From file
-const geojson = toGeoJSON("./locations.json");
-
-// From default file
-const geojson = toGeoJSON();
+const geojson = publicToGeoJSON("./locations.json");
 ```
 
-### `filter(geojson, options): GeoJSONCollection`
+#### `publicToGeoJSONFeature(location: any[]): GeoJSONFeature | null`
 
-**NEW unified filter function** - Filter with multiple criteria and exclusions.
+Convert single public weather location to GeoJSON feature.
+
+- `location`: Location array `[province, kabupaten, kecamatan, lat, lon, id, timestamp, weatherData, type]`
+- Returns: GeoJSON Feature object or `null`
+
+#### `filterPublicGeoJSON(geojson, options): GeoJSONCollection`
+
+Filter public weather GeoJSON with multiple criteria and exclusions.
 
 Options:
-
 - `province?: string` - Filter by province (exact match, case-insensitive)
 - `kabupaten?: string` - Filter by kabupaten (partial match, case-insensitive)
 - `kecamatan?: string` - Filter by kecamatan (partial match, case-insensitive)
@@ -195,69 +178,27 @@ Options:
 - `excludeKecamatan?: string | string[]` - Exclude kecamatans
 - `excludeType?: string | string[]` - Exclude types
 
-**Examples:**
-
 ```typescript
 // Province only
-filter(geojson, { province: "Jawa Tengah" });
+filterPublicGeoJSON(geojson, { province: "Jawa Tengah" });
 
 // Province excluding kabupatens
-filter(geojson, {
+filterPublicGeoJSON(geojson, {
   province: "Jawa Tengah",
   excludeKabupaten: ["Banyumas", "Cilacap"],
 });
 
-// Kabupaten excluding kecamatans
-filter(geojson, {
-  kabupaten: "Banyumas",
-  excludeKecamatan: ["Jatilawang"],
-});
-
-// Kecamatan only
-filter(geojson, {
-  kabupaten: "Banyumas",
-  kecamatan: "Purwokerto",
-});
-
 // Multiple criteria
-filter(geojson, {
+filterPublicGeoJSON(geojson, {
   province: "Jawa Barat",
   type: "pwx",
   excludeKabupaten: ["Bandung Barat"],
 });
 ```
 
-### `loadLocationData(filePath?: string): any[]`
+#### `filterPublicByBoundingBox(geojson, minLon, minLat, maxLon, maxLat): GeoJSONCollection`
 
-Load location data from JSON file. Used internally by `toGeoJSON()`.
-
-- `filePath` (optional): Path to location JSON file. Defaults to `../weather/location.json`
-- Returns: Array of location data
-
-### `parseWeatherData(weatherData: string[] | null): WeatherData | null`
-
-Parse weather data array into structured object. Used internally by `toGeoJSONFeature()`.
-
-- `weatherData`: Array of weather values `[humidity, temperature, rainfall, windDirection, windSpeed]`
-- Returns: Structured `WeatherData` object or `null`
-
-### `toGeoJSONFeature(location: any[]): GeoJSONFeature | null`
-
-Convert single location to GeoJSON feature. Used internally by `toGeoJSON()`.
-
-- `location`: Location array `[province, kabupaten, kecamatan, lat, lon, id, timestamp, weatherData, type]`
-- Returns: GeoJSON Feature object or `null`
-
-### `saveGeoJSON(geojson: GeoJSONCollection, outputPath: string): void`
-
-Save GeoJSON to file.
-
-- `geojson`: GeoJSON FeatureCollection to save
-- `outputPath`: Output file path
-
-### `filterByBoundingBox(geojson, minLon, minLat, maxLon, maxLat): GeoJSONCollection`
-
-Filter GeoJSON features within a bounding box.
+Filter public weather GeoJSON features within a bounding box.
 
 - `geojson`: GeoJSON FeatureCollection
 - `minLon`: Minimum longitude
@@ -266,9 +207,29 @@ Filter GeoJSON features within a bounding box.
 - `maxLat`: Maximum latitude
 - Returns: Filtered GeoJSON FeatureCollection
 
+#### `saveGeoJSON(geojson: GeoJSONCollection, outputPath: string): void`
+
+Save GeoJSON to file.
+
+### AWS Station Functions
+
+See [AWS.md](./AWS.md) for complete documentation.
+
+#### `awsToGeoJSON(stations: AWSStation[], includeMetadata?: boolean): AWSGeoJSONFeatureCollection`
+
+Convert array of AWS stations to GeoJSON FeatureCollection.
+
+#### `awsToGeoJSONFeature(station: AWSStation): AWSGeoJSONFeature | null`
+
+Convert single AWS station to GeoJSON feature.
+
+#### `awsToGeoJSONString(stations: AWSStation[], pretty?: boolean, includeMetadata?: boolean): string`
+
+Convert AWS stations to GeoJSON string.
+
 ## TypeScript Interfaces
 
-### `WeatherData`
+### Public Weather Types
 
 ```typescript
 interface WeatherData {
@@ -278,11 +239,7 @@ interface WeatherData {
   windDirection: string;
   windSpeed: string;
 }
-```
 
-### `GeoJSONFeature`
-
-```typescript
 interface GeoJSONFeature {
   type: "Feature";
   geometry: {
@@ -299,18 +256,20 @@ interface GeoJSONFeature {
     weather: WeatherData | null;
   };
 }
-```
 
-### `GeoJSONCollection`
-
-```typescript
 interface GeoJSONCollection {
   type: "FeatureCollection";
   features: GeoJSONFeature[];
 }
 ```
 
+### AWS Types
+
+See [AWS.md](./AWS.md) for AWS TypeScript interfaces.
+
 ## GeoJSON Output Structure
+
+### Public Weather
 
 ```json
 {
@@ -341,3 +300,43 @@ interface GeoJSONCollection {
   ]
 }
 ```
+
+### AWS Station
+
+```json
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [109.022964, -7.72488]
+      },
+      "properties": {
+        "id": "STA2201",
+        "name": "AWS Maritim Cilacap",
+        "city": "Kab. Cilacap",
+        "type": "aws",
+        "province": "Jawa Tengah",
+        "provinceCode": "PR013",
+        "status": { ... },
+        "weather": { ... },
+        "loggerTemp": null
+      }
+    }
+  ],
+  "metadata": {
+    "count": 14,
+    "generated": "2025-12-11T08:45:30.123Z",
+    "types": { "aws": 10, "arg": 4 }
+  }
+}
+```
+
+## Function Naming Convention
+
+| Data Source | Functions |
+|-------------|-----------|
+| Public Weather (PWX) | `publicToGeoJSON`, `publicToGeoJSONFeature`, `filterPublicGeoJSON`, `filterPublicByBoundingBox` |
+| AWS Stations | `awsToGeoJSON`, `awsToGeoJSONFeature`, `awsToGeoJSONString` |

@@ -642,7 +642,7 @@ app.get("/api/weather/:province", async (c) => {
   const type = c.req.query("type") || "aws";
 
   const data = await fetcher.fetchDataByProvince([province], type);
-  const geojson = toGeoJSON(data);
+  const geojson = awsToGeoJSON(data);
 
   return c.json(geojson);
 });
