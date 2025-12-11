@@ -137,7 +137,7 @@ export function Hero() {
   const timestamp = weather?.local_datetime;
 
   return (
-    <section className="w-full bg-white dark:bg-background-dark py-12 lg:py-16 px-4 sm:px-10 lg:px-40">
+    <section className="w-full h-[86vh] flex flex-col justify-center items-center bg-linear-to-br from-blue-50 via-white to-sky-50 dark:from-gray-900 dark:via-background-dark dark:to-gray-900 py-12 lg:py-16 px-4 sm:px-10 lg:px-40">
       <div className="mx-auto max-w-7xl">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <div className="flex flex-col gap-6">
@@ -211,13 +211,12 @@ export function Hero() {
               </button>
             </div>
           </div>
-          <div className="relative w-full h-full min-h-[400px] rounded-2xl overflow-hidden shadow-xl group">
+          <div className="relative w-full h-full min-h-[500px] rounded-2xl overflow-hidden shadow-xl group">
             <div className="absolute inset-0 bg-linear-to-t from-black/60 to-transparent z-10"></div>
             <div
               className="absolute inset-0 bg-center bg-cover transition-transform duration-700 group-hover:scale-105"
               style={{
-                backgroundImage:
-                  'url("https://lh3.googleusercontent.com/aida-public/AB6AXuDhxKpFVl7Tp4DW19JJBN9MBKZkVAvwezft5vuOCo3AV2OvglEyDH0kkv6La-RV0KaZ6nEIzoyklmu5jodV-DrLtcjOoa_dwNCM8P9uFI2CjfXQYrbPGzWDsqU7QoQ86iL6dqFFZC6niDHQcBp5Dj7hKWTcQYHgciV5swqLK2f3ZoPNWloDKmBKmCXHClBRLSu7dv1NVac4WD4apc8Ex92t_Y3EKTwe2Dk8cgCoOicsRu2zjANL58sX26USBIsJmI08GxWgxX7IBp8")',
+                backgroundImage: 'url("/pantai.webp")',
               }}
             ></div>
             <div className="absolute bottom-6 left-6 right-6 z-20">

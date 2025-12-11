@@ -106,7 +106,7 @@ export function Warnings() {
   const severity = getSeverityBadge(info?.severity || "");
 
   return (
-    <section className="w-full px-4 sm:px-10 lg:px-40 py-12 lg:py-16 bg-white dark:bg-background-dark">
+    <section className="w-full px-4 sm:px-10 lg:px-40 py-12 lg:py-16 bg-slate-50 dark:bg-gray-900/50">
       <div className="mx-auto max-w-7xl">
         <div className="flex items-center gap-2 mb-8">
           <span className="bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
@@ -198,12 +198,18 @@ export function Warnings() {
                       href={info.web.replace("infografis.jpg", "infografis_text.jpg")}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center justify-center h-12 px-4 rounded-xl bg-white border border-gray-200 hover:bg-gray-50 hover:border-gray-300 text-gray-700 font-bold text-sm transition-all dark:bg-transparent dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+                      className="flex items-center justify-center h-12 px-4 rounded-xl bg-white border border-gray-200 hover:bg-gray-50 hover:border-gray-300 text-gray-700 font-bold text-sm transition-all dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700 group/btn"
                     >
+                      <span className="material-symbols-outlined text-lg mr-2">
+                        location_on
+                      </span>
                       Detail Wilayah
                     </a>
                   ) : (
-                    <button className="flex items-center justify-center h-12 px-4 rounded-xl bg-white border border-gray-200 hover:bg-gray-50 hover:border-gray-300 text-gray-700 font-bold text-sm transition-all dark:bg-transparent dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">
+                    <button className="flex items-center justify-center h-12 px-4 rounded-xl bg-white border border-gray-200 hover:bg-gray-50 hover:border-gray-300 text-gray-700 font-bold text-sm transition-all dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700">
+                      <span className="material-symbols-outlined text-lg mr-2">
+                        location_on
+                      </span>
                       Detail Wilayah
                     </button>
                   )}
@@ -249,12 +255,15 @@ export function Warnings() {
                 </div>
                 <div className="grid grid-cols-2 gap-3 mt-auto pt-2">
                   <button className="flex items-center justify-center h-12 px-4 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-sm transition-all shadow-md shadow-orange-500/20 active:scale-95 group/btn">
-                    Peta Maritim
-                    <span className="material-symbols-outlined text-lg ml-2 transition-transform group-hover/btn:translate-x-1">
-                      map
+                    <span className="material-symbols-outlined text-lg mr-2">
+                      sailing
                     </span>
+                    Peta Maritim
                   </button>
-                  <button className="flex items-center justify-center h-12 px-4 rounded-xl bg-white border border-gray-200 hover:bg-gray-50 hover:border-gray-300 text-gray-700 font-bold text-sm transition-all dark:bg-transparent dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">
+                  <button className="flex items-center justify-center h-12 px-4 rounded-xl bg-white border border-gray-200 hover:bg-gray-50 hover:border-gray-300 text-gray-700 font-bold text-sm transition-all dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700">
+                    <span className="material-symbols-outlined text-lg mr-2">
+                      location_on
+                    </span>
                     Detail Wilayah
                   </button>
                 </div>
