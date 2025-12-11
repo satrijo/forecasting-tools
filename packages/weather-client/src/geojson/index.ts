@@ -5,11 +5,20 @@
 
 import * as fs from "fs";
 
+/**
+ * Weather data from BMKG public API (signature.bmkg.go.id)
+ * @see kode.md for weather code reference
+ */
 export interface WeatherData {
+  /** Kelembapan udara dalam % */
   humidity: string;
+  /** Suhu udara dalam °C */
   temperature: string;
-  rainfall: string;
+  /** Kode cuaca (0-97), lihat kode.md untuk referensi */
+  weatherCode: string;
+  /** Arah angin dari (N, NE, E, SE, S, SW, W, NW, dll) */
   windDirection: string;
+  /** Kecepatan angin dalam km/jam */
   windSpeed: string;
 }
 
@@ -45,6 +54,7 @@ export function loadLocationData(filePath: string): any[] {
 
 /**
  * Convert weather data array to structured object
+ * Array format: [humidity, temperature, weatherCode, windDirection, windSpeed]
  */
 export function parseWeatherData(
   weatherData: string[] | null,
@@ -56,7 +66,7 @@ export function parseWeatherData(
   return {
     humidity: weatherData[0] || "",
     temperature: weatherData[1] || "",
-    rainfall: weatherData[2] || "",
+    weatherCode: weatherData[2] || "",
     windDirection: weatherData[3] || "",
     windSpeed: weatherData[4] || "",
   };

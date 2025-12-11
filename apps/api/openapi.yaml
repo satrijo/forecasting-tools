@@ -261,14 +261,77 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  /public/location:
+    get:
+      tags:
+        - Public
+      summary: Get Weather by Location
+      description: |
+        Mendapatkan data cuaca untuk lokasi spesifik berdasarkan kode ADM4 atau koordinat.
+        
+        **Pilih salah satu:**
+        - `code` - Kode wilayah ADM4 (contoh: 33.01.22.1003 untuk Cilacap Tengah)
+        - `lat` + `lon` - Koordinat latitude dan longitude
+      operationId: getLocationWeather
+      parameters:
+        - name: code
+          in: query
+          description: |
+            Kode wilayah ADM4 (format: XX.XX.XX.XXXX)
+            Contoh: `33.01.22.1003` untuk Cilacap Tengah, Sidanegara
+          schema:
+            type: string
+          example: '33.01.22.1003'
+        - name: lat
+          in: query
+          description: Latitude koordinat (wajib bersama `lon`)
+          schema:
+            type: number
+            minimum: -90
+            maximum: 90
+          example: -7.656747
+        - name: lon
+          in: query
+          description: Longitude koordinat (wajib bersama `lat`)
+          schema:
+            type: number
+            minimum: -180
+            maximum: 180
+          example: 109.115523
+      responses:
+        '200':
+          description: Data lokasi berhasil diambil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LocationWeatherResponse'
+        '400':
+          description: Parameter tidak valid atau tidak lengkap
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
   /public/weather:
     get:
       tags:
         - Public
-      summary: Get Public Weather Data
+      summary: Get Public Weather Data (Bulk)
       description: |
-        Mendapatkan data prakiraan cuaca publik.
+        Mendapatkan data prakiraan cuaca publik untuk banyak lokasi sekaligus.
         Data dapat difilter berdasarkan provinsi, kabupaten, atau kecamatan.
+        
+        **Gunakan endpoint ini untuk:**
+        - Menampilkan peta dengan banyak titik cuaca
+        - Mengambil data seluruh wilayah
+        
+        **Untuk data lokasi spesifik, gunakan `/public/location`**
       operationId: getPublicWeather
       parameters:
         - name: province
@@ -855,6 +918,9 @@ components:
             weather:
               type: string
               example: /public/weather - Weather forecast data (GeoJSON)
+            location:
+              type: string
+              example: /public/location - Weather by location code (ADM4)
         examples:
           type: object
 
@@ -979,14 +1045,194 @@ components:
             weather:
               type: object
               nullable: true
+              description: Data cuaca dari BMKG
               properties:
                 humidity:
                   type: string
+                  description: Kelembapan udara (%)
                 temperature:
                   type: string
-                rainfall:
+                  description: Suhu udara (°C)
+                weatherCode:
                   type: string
+                  description: Kode cuaca (0-97), lihat kode.md untuk referensi
                 windDirection:
                   type: string
+                  description: Arah angin dari (N, NE, E, SE, S, SW, W, NW, dll)
                 windSpeed:
                   type: string
+                  description: Kecepatan angin (km/jam)
+
+    LocationWeatherResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        source:
+          type: string
+          example: signature.bmkg.go.id
+        type:
+          type: string
+          enum: [by_code, by_coordinates]
+          example: by_code
+        code:
+          type: string
+          description: Kode ADM4 (jika query by code)
+          example: '33.01.22.1003'
+        coordinates:
+          type: object
+          description: Koordinat (jika query by coordinates)
+          properties:
+            lat:
+              type: number
+              example: -7.656747
+            lon:
+              type: number
+              example: 109.115523
+        data:
+          type: object
+          description: Data cuaca dari BMKG
+          properties:
+            status:
+              type: integer
+              example: 200
+            data:
+              type: object
+              properties:
+                lokasi:
+                  $ref: '#/components/schemas/BMKGLocationInfo'
+                cuaca:
+                  $ref: '#/components/schemas/BMKGCurrentWeather'
+                prakiraan:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/BMKGForecastWeather'
+
+    BMKGLocationInfo:
+      type: object
+      description: Informasi lokasi dari BMKG
+      properties:
+        lon:
+          type: number
+          description: Longitude
+          example: 109.015875
+        lat:
+          type: number
+          description: Latitude
+          example: -7.709959
+        adm1:
+          type: string
+          description: Kode provinsi
+          example: '33'
+        adm2:
+          type: string
+          description: Kode kabupaten/kota
+          example: '33.01'
+        adm3:
+          type: string
+          description: Kode kecamatan
+          example: '33.01.22'
+        adm4:
+          type: string
+          description: Kode kelurahan/desa
+          example: '33.01.22.1003'
+        provinsi:
+          type: string
+          example: Jawa Tengah
+        kotkab:
+          type: string
+          example: Cilacap
+        kecamatan:
+          type: string
+          example: Cilacap tengah
+        desa:
+          type: string
+          example: Sidanegara
+
+    BMKGCurrentWeather:
+      type: object
+      description: Data cuaca saat ini
+      properties:
+        weather:
+          type: integer
+          description: Kode cuaca (0-104), lihat kode.md
+          example: 3
+        weather_desc:
+          type: string
+          description: Deskripsi cuaca (ID)
+          example: Berawan
+        weather_desc_en:
+          type: string
+          description: Deskripsi cuaca (EN)
+          example: Mostly Cloudy
+        image:
+          type: string
+          description: URL ikon cuaca dari BMKG
+          example: https://api-apps.bmkg.go.id/storage/icon/cuaca/berawan-pm.svg
+        datetime:
+          type: string
+          example: '2025-12-11T14:40:00.000Z'
+        local_datetime:
+          type: string
+          example: '2025-12-11 21:40:00'
+        t:
+          type: number
+          description: Suhu udara (°C)
+          example: 26
+        tcc:
+          type: number
+          description: Tutupan awan (%)
+          example: 62
+        wd_deg:
+          type: number
+          description: Arah angin dalam derajat
+          example: 239
+        wd:
+          type: string
+          description: Arah angin dari (N, NE, E, SE, S, SW, W, NW)
+          example: SW
+        wd_to:
+          type: string
+          description: Arah angin menuju
+          example: NE
+        ws:
+          type: number
+          description: Kecepatan angin (km/jam)
+          example: 3.5
+        hu:
+          type: number
+          description: Kelembapan udara (%)
+          example: 89
+        vs:
+          type: number
+          description: Jarak pandang (meter)
+          example: 9467
+        vs_text:
+          type: string
+          description: Jarak pandang (text)
+          example: '< 10 km'
+        source:
+          type: string
+          example: coord-pwx
+
+    BMKGForecastWeather:
+      type: object
+      description: Data prakiraan cuaca
+      allOf:
+        - $ref: '#/components/schemas/BMKGCurrentWeather'
+        - type: object
+          properties:
+            tp:
+              type: number
+              description: Total presipitasi (mm)
+              example: 0.2
+            time_index:
+              type: string
+              example: '2-3'
+            analysis_date:
+              type: string
+              example: '2025-12-11T12:00:00'
+            utc_datetime:
+              type: string
+              example: '2025-12-11 15:00:00'

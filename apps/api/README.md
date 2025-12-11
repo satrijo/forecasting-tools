@@ -1,6 +1,8 @@
 # BMKG Weather API
 
-REST API untuk mengambil data cuaca real-time dari stasiun AWS (Automatic Weather Station) dan ARG (Automatic Rain Gauge) BMKG Indonesia.
+REST API untuk mengambil data cuaca dari BMKG Indonesia:
+- **AWS/ARG** - Data real-time dari stasiun cuaca otomatis
+- **Public Weather** - Data prakiraan cuaca publik (nowcasting, forecast)
 
 ## 📋 Daftar Isi
 
@@ -8,6 +10,7 @@ REST API untuk mengambil data cuaca real-time dari stasiun AWS (Automatic Weathe
 - [Tech Stack](#️-tech-stack)
 - [Setup](#-setup)
 - [API Endpoints](#-api-endpoints)
+- [Public Weather API](#-public-weather-api)
 - [Query Parameters](#-query-parameters)
 - [Response Format](#-response-format)
 - [Contoh Penggunaan](#-contoh-penggunaan)
@@ -105,6 +108,105 @@ Fetch data cuaca dari stasiun AWS/ARG dengan berbagai filter.
 - `city` - Fetch by city name(s)
 - `lat` + `lon` + `radius` - Fetch by radius
 - `stations` - Fetch by station ID(s)
+
+## 🌤️ Public Weather API
+
+Endpoint untuk data cuaca publik dari BMKG.
+
+### GET `/public`
+
+Info endpoint public weather yang tersedia.
+
+### GET `/public/location`
+
+Mendapatkan data cuaca untuk **lokasi spesifik**.
+
+**Parameter (pilih salah satu):**
+
+| Parameter | Type | Description | Example |
+|-----------|------|-------------|---------|
+| `code` | string | Kode wilayah ADM4 | `33.01.22.1003` |
+| `lat` | number | Latitude koordinat | `-7.656747` |
+| `lon` | number | Longitude koordinat | `109.115523` |
+
+**Contoh:**
+
+```bash
+# By ADM4 code
+curl "http://localhost:3000/public/location?code=33.01.22.1003"
+
+# By coordinates
+curl "http://localhost:3000/public/location?lat=-7.656747&lon=109.115523"
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "source": "signature.bmkg.go.id",
+  "type": "by_code",
+  "code": "33.01.22.1003",
+  "data": { ... }
+}
+```
+
+### GET `/public/weather`
+
+Mendapatkan data cuaca untuk **banyak lokasi** (bulk) dalam format GeoJSON.
+
+**Parameter:**
+
+| Parameter | Type | Description | Example |
+|-----------|------|-------------|---------|
+| `province` | string | Filter provinsi | `jawa_tengah` |
+| `kabupaten` | string | Filter kabupaten | `cilacap` |
+| `kecamatan` | string | Filter kecamatan | `cilacap_tengah` |
+| `format` | string | Output format: `geojson` (default) atau `json` | `geojson` |
+
+**Contoh:**
+
+```bash
+# Semua data
+curl "http://localhost:3000/public/weather"
+
+# Filter by province
+curl "http://localhost:3000/public/weather?province=jawa_tengah"
+
+# Filter lebih spesifik
+curl "http://localhost:3000/public/weather?province=jawa_tengah&kabupaten=cilacap"
+```
+
+### GET `/public/nowcasting`
+
+Data nowcasting (prakiraan cuaca jangka pendek).
+
+**Parameter:**
+
+| Parameter | Type | Description | Example |
+|-----------|------|-------------|---------|
+| `type` | string | Sumber: `signature` (default), `xml`, `databmkg` | `signature` |
+| `code` | string | Kode stasiun (untuk type=signature) | `CJH` |
+| `province` | string | Nama provinsi (WAJIB untuk type=xml) | `jawa_tengah` |
+
+**Contoh:**
+
+```bash
+# From signature.bmkg.go.id
+curl "http://localhost:3000/public/nowcasting?code=CJH"
+
+# From www.bmkg.go.id (XML)
+curl "http://localhost:3000/public/nowcasting?type=xml&province=jawa_tengah"
+```
+
+### Perbedaan `/public/location` vs `/public/weather`
+
+| | `/public/location` | `/public/weather` |
+|---|---|---|
+| **Data** | Satu lokasi spesifik | Banyak lokasi (bulk) |
+| **Format** | Raw JSON | GeoJSON FeatureCollection |
+| **Query** | code (ADM4) atau lat/lon | province, kabupaten, kecamatan |
+| **Use case** | Detail cuaca satu tempat | Peta, visualisasi banyak titik |
 
 ## 🔧 Query Parameters
 

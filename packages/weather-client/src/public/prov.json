@@ -1,0 +1,184 @@
+{
+  "ACEH": ["aceh", "CAH", 4.560789, 96.801942, 8, "Asia/Jakarta"],
+  "SUMATERA UTARA": ["sumut", "CSU", 2.553288, 99.07939, 8, "Asia/Jakarta"],
+  "KEPULAUAN RIAU": ["kepriau", "CKR", 0.805906, 104.065444, 8, "Asia/Jakarta"],
+  "RIAU": ["riau", "CRU", 0.457551, 101.845824, 8, "Asia/Jakarta"],
+  "SUMATERA BARAT": ["sumbar", "CSB", -0.613494, 100.405078, 8, "Asia/Jakarta"],
+  "JAMBI": ["jambi", "CJI", -1.472544, 103.165536, 8, "Asia/Jakarta"],
+  "BENGKULU": ["bengkulu", "CBK", -3.464013, 102.307155, 8, "Asia/Jakarta"],
+  "SUMATERA SELATAN": [
+    "sumsel",
+    "CSS",
+    -3.042937,
+    104.41433,
+    8,
+    "Asia/Jakarta"
+  ],
+  "KEPULAUAN BANGKA BELITUNG": [
+    "babel",
+    "CBB",
+    -2.520633,
+    106.57354,
+    9,
+    "Asia/Jakarta"
+  ],
+  "LAMPUNG": ["lampung", "CLG", -4.791826, 105.086669, 8, "Asia/Jakarta"],
+  "BANTEN": ["banten", "CBT", -6.400144, 106.169912, 8, "Asia/Jakarta"],
+  "DKI JAKARTA": ["jakarta", "CJK", -6.177595, 106.837508, 11, "Asia/Jakarta"],
+  "JAWA BARAT": ["jawabarat", "CJB", -6.85868, 107.717641, 9, "Asia/Jakarta"],
+  "JAWA TENGAH": [
+    "jawatengah",
+    "CJH",
+    -7.321515,
+    109.621515,
+    9,
+    "Asia/Jakarta"
+  ],
+  "DAERAH ISTIMEWA YOGYAKARTA": [
+    "jogyakarta",
+    "CYG",
+    -7.875434,
+    110.409635,
+    10,
+    "Asia/Jakarta"
+  ],
+  "JAWA TIMUR": ["jawatimur", "CJT", -7.643038, 112.404047, 9, "Asia/Jakarta"],
+
+  "KALIMANTAN BARAT": [
+    "kalbar",
+    "CKB",
+    -0.112401,
+    110.852426,
+    8,
+    "Asia/Jakarta"
+  ],
+  "KALIMANTAN TENGAH": [
+    "kalteng",
+    "CKG",
+    -1.426241,
+    113.673553,
+    8,
+    "Asia/Jakarta"
+  ],
+  "KALIMANTAN SELATAN": [
+    "kalsel",
+    "CKS",
+    -3.161298,
+    115.44533,
+    8,
+    "Asia/Makassar"
+  ],
+  "KALIMANTAN TIMUR": [
+    "kaltim",
+    "CKT",
+    0.276473,
+    116.525469,
+    8,
+    "Asia/Makassar"
+  ],
+  "KALIMANTAN UTARA": [
+    "kaluta",
+    "CKU",
+    3.027073,
+    116.28377,
+    8,
+    "Asia/Makassar"
+  ],
+
+  "SULAWESI UTARA": ["sulut", "CSR", 0.910133, 124.366616, 8, "Asia/Makassar"],
+  "SULAWESI TENGAH": [
+    "sulteng",
+    "CSG",
+    -1.048327,
+    120.836125,
+    8,
+    "Asia/Makassar"
+  ],
+  "SULAWESI SELATAN": [
+    "sulsel",
+    "CSL",
+    -3.539822,
+    119.958284,
+    8,
+    "Asia/Makassar"
+  ],
+  "SULAWESI TENGGARA": [
+    "sultenggara",
+    "CST",
+    -3.922977,
+    121.875045,
+    8,
+    "Asia/Makassar"
+  ],
+  "SULAWESI BARAT": [
+    "sulbar",
+    "CSK",
+    -2.370051,
+    119.355742,
+    8,
+    "Asia/Makassar"
+  ],
+  "GORONTALO": ["gorontalo", "CGT", 0.753324, 122.415607, 8, "Asia/Makassar"],
+
+  "BALI": ["bali", "CBL", -8.356539, 115.134573, 9, "Asia/Makassar"],
+  "NUSA TENGGARA BARAT": [
+    "ntb",
+    "CNB",
+    -8.612777,
+    117.537123,
+    8,
+    "Asia/Makassar"
+  ],
+  "NUSA TENGGARA TIMUR": [
+    "ntt",
+    "CNT",
+    -8.704275,
+    121.627182,
+    8,
+    "Asia/Makassar"
+  ],
+
+  "MALUKU": ["maluku", "CML", -3.232001, 128.403443, 8, "Asia/Jayapura"],
+  "MALUKU UTARA": ["malut", "CMU", 0.461963, 127.686308, 8, "Asia/Jayapura"],
+  "PAPUA": ["papua", "CPU", -4.483278, 137.882922, 8, "Asia/Jayapura"],
+  "PAPUA BARAT": [
+    "papuabarat",
+    "CPB",
+    -1.78101,
+    133.180996,
+    8,
+    "Asia/Jayapura"
+  ],
+  "PAPUA TENGAH": [
+    "papuatengah",
+    "CPT",
+    -3.559731,
+    135.440056,
+    8,
+    "Asia/Jayapura"
+  ],
+  "PAPUA BARATDAYA": [
+    "papuabaratdaya",
+    "CPD",
+    -1.006592,
+    131.336347,
+    8,
+    "Asia/Jayapura"
+  ],
+  "PAPUA PEGUNUNGAN": [
+    "papuapegunungan",
+    "CPP",
+    -4.025864,
+    138.635022,
+    8,
+    "Asia/Jayapura"
+  ],
+  "PAPUA SELATAN": [
+    "papuaselatan",
+    "CPS",
+    -6.863509,
+    139.782749,
+    8,
+    "Asia/Jayapura"
+  ]
+}

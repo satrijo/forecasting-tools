@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { cors } from "hono/cors";
 import * as fs from "fs";
 import * as path from "path";
 import rootRoute from "./routes/index";
@@ -6,6 +7,9 @@ import awsRoute from "./routes/aws";
 import publicRoute from "./routes/public";
 
 const app = new Hono();
+
+// Enable CORS for all origins in development
+app.use("*", cors());
 
 // Serve OpenAPI spec with correct content type
 app.get("/openapi.yaml", (c) => {
