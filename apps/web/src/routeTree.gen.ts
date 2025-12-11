@@ -9,68 +9,212 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as AboutRouteImport } from './routes/about'
-import { Route as IndexRouteImport } from './routes/index'
+import { Route as DefaultRouteImport } from './routes/_default'
+import { Route as DashboardRouteImport } from './routes/_dashboard'
+import { Route as DefaultIndexRouteImport } from './routes/_default/index'
+import { Route as DefaultAboutRouteImport } from './routes/_default/about'
+import { Route as DashboardDashboardIndexRouteImport } from './routes/_dashboard.dashboard/index'
+import { Route as DashboardDashboardSettingsRouteImport } from './routes/_dashboard.dashboard/settings'
+import { Route as DashboardDashboardPublicRouteImport } from './routes/_dashboard.dashboard/public'
+import { Route as DashboardDashboardAwsRouteImport } from './routes/_dashboard.dashboard/aws'
 
-const AboutRoute = AboutRouteImport.update({
-  id: '/about',
-  path: '/about',
+const DefaultRoute = DefaultRouteImport.update({
+  id: '/_default',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
+const DashboardRoute = DashboardRouteImport.update({
+  id: '/_dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DefaultIndexRoute = DefaultIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => DefaultRoute,
+} as any)
+const DefaultAboutRoute = DefaultAboutRouteImport.update({
+  id: '/about',
+  path: '/about',
+  getParentRoute: () => DefaultRoute,
+} as any)
+const DashboardDashboardIndexRoute = DashboardDashboardIndexRouteImport.update({
+  id: '/dashboard/',
+  path: '/dashboard/',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardDashboardSettingsRoute =
+  DashboardDashboardSettingsRouteImport.update({
+    id: '/dashboard/settings',
+    path: '/dashboard/settings',
+    getParentRoute: () => DashboardRoute,
+  } as any)
+const DashboardDashboardPublicRoute =
+  DashboardDashboardPublicRouteImport.update({
+    id: '/dashboard/public',
+    path: '/dashboard/public',
+    getParentRoute: () => DashboardRoute,
+  } as any)
+const DashboardDashboardAwsRoute = DashboardDashboardAwsRouteImport.update({
+  id: '/dashboard/aws',
+  path: '/dashboard/aws',
+  getParentRoute: () => DashboardRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
-  '/about': typeof AboutRoute
+  '/about': typeof DefaultAboutRoute
+  '/': typeof DefaultIndexRoute
+  '/dashboard/aws': typeof DashboardDashboardAwsRoute
+  '/dashboard/public': typeof DashboardDashboardPublicRoute
+  '/dashboard/settings': typeof DashboardDashboardSettingsRoute
+  '/dashboard': typeof DashboardDashboardIndexRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/about': typeof AboutRoute
+  '/about': typeof DefaultAboutRoute
+  '/': typeof DefaultIndexRoute
+  '/dashboard/aws': typeof DashboardDashboardAwsRoute
+  '/dashboard/public': typeof DashboardDashboardPublicRoute
+  '/dashboard/settings': typeof DashboardDashboardSettingsRoute
+  '/dashboard': typeof DashboardDashboardIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
-  '/about': typeof AboutRoute
+  '/_dashboard': typeof DashboardRouteWithChildren
+  '/_default': typeof DefaultRouteWithChildren
+  '/_default/about': typeof DefaultAboutRoute
+  '/_default/': typeof DefaultIndexRoute
+  '/_dashboard/dashboard/aws': typeof DashboardDashboardAwsRoute
+  '/_dashboard/dashboard/public': typeof DashboardDashboardPublicRoute
+  '/_dashboard/dashboard/settings': typeof DashboardDashboardSettingsRoute
+  '/_dashboard/dashboard/': typeof DashboardDashboardIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/about'
+  fullPaths:
+    | '/about'
+    | '/'
+    | '/dashboard/aws'
+    | '/dashboard/public'
+    | '/dashboard/settings'
+    | '/dashboard'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/about'
-  id: '__root__' | '/' | '/about'
+  to:
+    | '/about'
+    | '/'
+    | '/dashboard/aws'
+    | '/dashboard/public'
+    | '/dashboard/settings'
+    | '/dashboard'
+  id:
+    | '__root__'
+    | '/_dashboard'
+    | '/_default'
+    | '/_default/about'
+    | '/_default/'
+    | '/_dashboard/dashboard/aws'
+    | '/_dashboard/dashboard/public'
+    | '/_dashboard/dashboard/settings'
+    | '/_dashboard/dashboard/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
-  AboutRoute: typeof AboutRoute
+  DashboardRoute: typeof DashboardRouteWithChildren
+  DefaultRoute: typeof DefaultRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/about': {
-      id: '/about'
-      path: '/about'
-      fullPath: '/about'
-      preLoaderRoute: typeof AboutRouteImport
+    '/_default': {
+      id: '/_default'
+      path: ''
+      fullPath: ''
+      preLoaderRoute: typeof DefaultRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
+    '/_dashboard': {
+      id: '/_dashboard'
+      path: ''
+      fullPath: ''
+      preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_default/': {
+      id: '/_default/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof DefaultIndexRouteImport
+      parentRoute: typeof DefaultRoute
+    }
+    '/_default/about': {
+      id: '/_default/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof DefaultAboutRouteImport
+      parentRoute: typeof DefaultRoute
+    }
+    '/_dashboard/dashboard/': {
+      id: '/_dashboard/dashboard/'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardDashboardIndexRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/dashboard/settings': {
+      id: '/_dashboard/dashboard/settings'
+      path: '/dashboard/settings'
+      fullPath: '/dashboard/settings'
+      preLoaderRoute: typeof DashboardDashboardSettingsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/dashboard/public': {
+      id: '/_dashboard/dashboard/public'
+      path: '/dashboard/public'
+      fullPath: '/dashboard/public'
+      preLoaderRoute: typeof DashboardDashboardPublicRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/_dashboard/dashboard/aws': {
+      id: '/_dashboard/dashboard/aws'
+      path: '/dashboard/aws'
+      fullPath: '/dashboard/aws'
+      preLoaderRoute: typeof DashboardDashboardAwsRouteImport
+      parentRoute: typeof DashboardRoute
     }
   }
 }
 
+interface DashboardRouteChildren {
+  DashboardDashboardAwsRoute: typeof DashboardDashboardAwsRoute
+  DashboardDashboardPublicRoute: typeof DashboardDashboardPublicRoute
+  DashboardDashboardSettingsRoute: typeof DashboardDashboardSettingsRoute
+  DashboardDashboardIndexRoute: typeof DashboardDashboardIndexRoute
+}
+
+const DashboardRouteChildren: DashboardRouteChildren = {
+  DashboardDashboardAwsRoute: DashboardDashboardAwsRoute,
+  DashboardDashboardPublicRoute: DashboardDashboardPublicRoute,
+  DashboardDashboardSettingsRoute: DashboardDashboardSettingsRoute,
+  DashboardDashboardIndexRoute: DashboardDashboardIndexRoute,
+}
+
+const DashboardRouteWithChildren = DashboardRoute._addFileChildren(
+  DashboardRouteChildren,
+)
+
+interface DefaultRouteChildren {
+  DefaultAboutRoute: typeof DefaultAboutRoute
+  DefaultIndexRoute: typeof DefaultIndexRoute
+}
+
+const DefaultRouteChildren: DefaultRouteChildren = {
+  DefaultAboutRoute: DefaultAboutRoute,
+  DefaultIndexRoute: DefaultIndexRoute,
+}
+
+const DefaultRouteWithChildren =
+  DefaultRoute._addFileChildren(DefaultRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
-  AboutRoute: AboutRoute,
+  DashboardRoute: DashboardRouteWithChildren,
+  DefaultRoute: DefaultRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

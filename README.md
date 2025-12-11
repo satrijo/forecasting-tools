@@ -105,13 +105,51 @@ REST API untuk mengambil data cuaca real-time dari stasiun AWS/ARG BMKG.
 
 ### Web (`apps/web`)
 
-Frontend aplikasi untuk visualisasi data cuaca (coming soon).
+Dashboard untuk visualisasi data cuaca BMKG.
 
 **Tech Stack:**
 
-- React
-- Vite
-- TypeScript
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| React | 19 | UI Library |
+| Vite | 7 | Build tool |
+| TanStack Router | 1.x | File-based routing |
+| TanStack Query | 5.x | Data fetching & caching |
+| Tailwind CSS | 4 | Styling |
+| TypeScript | 5.9 | Type safety |
+
+**Features:**
+
+- ✅ File-based routing dengan TanStack Router
+- ✅ Data fetching & caching dengan TanStack Query
+- ✅ Multiple layouts (Default, Dashboard)
+- ✅ Feature-based architecture
+- ✅ Type-safe navigation & API calls
+
+**Routes:**
+
+| URL | Layout | Description |
+|-----|--------|-------------|
+| `/` | Default | Home page |
+| `/about` | Default | About page |
+| `/dashboard` | Dashboard | Dashboard overview |
+| `/dashboard/aws` | Dashboard | AWS stations data |
+| `/dashboard/public` | Dashboard | Public weather data |
+| `/dashboard/settings` | Dashboard | Settings |
+
+**Project Structure:**
+
+```
+apps/web/src/
+├── routes/           # Route definitions (thin)
+├── features/         # Feature modules (business logic)
+├── components/       # Shared components
+├── layouts/          # Page layouts
+├── lib/              # Utilities
+└── main.tsx          # Entry point
+```
+
+**Dokumentasi lengkap**: [`apps/web/README.md`](apps/web/README.md)
 
 ## 📦 Packages
 
@@ -295,6 +333,10 @@ bun run check-types  # Type checking
 - **AWS Fetcher**: [`packages/weather-client/src/aws/README.md`](packages/weather-client/src/aws/README.md)
 - **GeoJSON Converter**: [`packages/weather-client/src/geojson/README.md`](packages/weather-client/src/geojson/README.md)
 - **AWS to GeoJSON**: [`packages/weather-client/src/geojson/AWS.md`](packages/weather-client/src/geojson/AWS.md)
+
+### Web
+
+- **Web README**: [`apps/web/README.md`](apps/web/README.md) - Dokumentasi lengkap frontend
 
 ### Data
 
