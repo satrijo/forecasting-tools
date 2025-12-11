@@ -26,7 +26,7 @@ export * from "./awos";
 export * from "./geojson";
 
 // Export Weather forecast module
-export * from "./weather";
+export * from "./public";
 
 // Package version
 export const VERSION = "0.0.0";

@@ -126,6 +126,7 @@ Fetch data cuaca dari stasiun AWS/ARG dengan berbagai filter.
 | `type`    | string | `null` (all) | Filter tipe stasiun: `aws`, `arg`, atau `aws,arg`                | `aws`          |
 | `match`   | string | `partial`    | Mode pencarian city: `partial`, `exact`, `startsWith`            | `exact`        |
 | `exclude` | string | -            | Exclude kota tertentu (comma-separated, hanya untuk city search) | `banjarnegara` |
+| `format`  | string | `json`       | Format output: `json` (default) atau `geojson`                   | `geojson`      |
 
 ### Parameter Details
 
@@ -145,6 +146,55 @@ Fetch data cuaca dari stasiun AWS/ARG dengan berbagai filter.
 #### `exclude` (untuk city search)
 
 Mengecualikan kota dari hasil. Contoh: `city=banjar&exclude=banjarnegara,banjarmasin` hanya return "Kab. Banjar"
+
+#### `format`
+
+Format output response:
+
+- `json` - Format JSON standar dengan metadata (default). Cocok untuk API consumption dan data processing.
+- `geojson` - Format GeoJSON (RFC 7946) untuk mapping dan visualisasi geografis. Content-Type: `application/geo+json`
+
+**JSON Response Structure:**
+
+```json
+{
+  "success": true,
+  "summary": { "total": 10, "successful": 9, "failed": 1 },
+  "stations": [...],
+  "failed": [...]
+}
+```
+
+**GeoJSON Response Structure:**
+
+```json
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [109.015, -7.727]
+      },
+      "properties": {
+        "id": "96805",
+        "name": "AWS Cilacap",
+        "city": "Cilacap",
+        "type": "aws",
+        "province": "Jawa Tengah",
+        "weather": { "temperature": 28.5, ... },
+        ...
+      }
+    }
+  ],
+  "metadata": {
+    "count": 9,
+    "generated": "2025-12-10T...",
+    "types": { "aws": 5, "arg": 4 }
+  }
+}
+```
 
 #### Underscore `_` untuk Spasi
 
@@ -222,6 +272,9 @@ curl "http://localhost:3000/aws?province=PR013"
 
 # Hanya AWS di Jawa Tengah
 curl "http://localhost:3000/aws?province=PR013&type=aws"
+
+# GeoJSON format untuk mapping
+curl "http://localhost:3000/aws?province=PR013&format=geojson"
 ```
 
 **Multiple Provinces:**
@@ -232,6 +285,9 @@ curl "http://localhost:3000/aws?province=PR013,PR015"
 
 # Hanya ARG di beberapa provinsi
 curl "http://localhost:3000/aws?province=PR013,PR015,PR014&type=arg"
+
+# GeoJSON untuk beberapa provinsi
+curl "http://localhost:3000/aws?province=PR013,PR015&format=geojson"
 ```
 
 **Kode Provinsi:**
@@ -253,6 +309,9 @@ curl "http://localhost:3000/aws?city=cilacap"
 
 # Cari stasiun di Banjar Baru (gunakan underscore untuk spasi)
 curl "http://localhost:3000/aws?city=banjar_baru"
+
+# GeoJSON format
+curl "http://localhost:3000/aws?city=cilacap&format=geojson"
 ```
 
 **Multiple Cities:**
@@ -263,6 +322,9 @@ curl "http://localhost:3000/aws?city=cilacap,banyumas,purwokerto"
 
 # Dengan filter tipe AWS
 curl "http://localhost:3000/aws?city=cilacap,bandung,surabaya&type=aws"
+
+# GeoJSON untuk beberapa kota
+curl "http://localhost:3000/aws?city=cilacap,bandung&format=geojson"
 ```
 
 **Exact Match:**
@@ -301,6 +363,9 @@ curl "http://localhost:3000/aws?lat=-7.797&lon=110.370&radius=50"
 
 # Hanya AWS dalam radius 25km dari Jakarta
 curl "http://localhost:3000/aws?lat=-6.2088&lon=106.8456&radius=25&type=aws"
+
+# GeoJSON format dengan distance
+curl "http://localhost:3000/aws?lat=-7.797&lon=110.370&radius=50&format=geojson"
 ```
 
 **Koordinat Kota-kota Besar:**
@@ -355,7 +420,40 @@ curl "http://localhost:3000/aws?province=PR013,PR014&type=aws"
 
 # Radius dengan type filter
 curl "http://localhost:3000/aws?lat=-7.5&lon=110.5&radius=100&type=arg"
+
+# Kombinasi filter dengan GeoJSON
+curl "http://localhost:3000/aws?province=PR013&type=aws&format=geojson"
 ```
+
+### 6. GeoJSON untuk Mapping
+
+**Integration dengan Leaflet/Mapbox:**
+
+```javascript
+// Fetch data dalam format GeoJSON
+fetch("http://localhost:3000/aws?province=PR013&format=geojson")
+  .then((res) => res.json())
+  .then((geojson) => {
+    // Tambahkan ke map
+    L.geoJSON(geojson, {
+      pointToLayer: (feature, latlng) => {
+        return L.marker(latlng).bindPopup(`
+          <b>${feature.properties.name}</b><br>
+          ${feature.properties.city}<br>
+          Temp: ${feature.properties.weather?.temperature}°C
+        `);
+      },
+    }).addTo(map);
+  });
+```
+
+**Fitur GeoJSON Response:**
+
+- ✅ RFC 7946 compliant
+- ✅ Includes metadata (station count, types breakdown)
+- ✅ Weather data di properties
+- ✅ Distance field untuk radius queries
+- ✅ Content-Type: `application/geo+json`
 
 ## 🔐 Security
 

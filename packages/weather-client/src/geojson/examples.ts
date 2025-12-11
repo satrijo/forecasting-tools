@@ -4,6 +4,7 @@
  * Usage: bun src/geojson/examples.ts
  */
 
+import path from "path";
 import {
   toGeoJSON,
   filter,
@@ -11,23 +12,15 @@ import {
   saveGeoJSON,
 } from "./index.ts";
 
-// Example 1: Load from default file
-console.log("=== Example 1: Load from Default File ===");
-const allLocations = toGeoJSON();
+// Example 1: Load from file
+console.log("=== Example 1: Load from File ===");
+const locationPath = path.join(import.meta.dir, "../public/location.json");
+const allLocations = toGeoJSON(locationPath);
 console.log(`Total locations: ${allLocations.features.length}`);
 console.log();
 
-// Example 2: Load from custom file
-console.log("=== Example 2: Load from Custom File ===");
-// Using absolute path
-import path from "path";
-const customPath = path.join(import.meta.dir, "../weather/location.json");
-const customLocations = toGeoJSON(customPath);
-console.log(`Custom file locations: ${customLocations.features.length}`);
-console.log();
-
-// Example 3: Convert from array (simulating API response)
-console.log("=== Example 3: Convert from Array (API-like) ===");
+// Example 2: Convert from array (simulating API response)
+console.log("=== Example 2: Convert from Array (API-like) ===");
 const mockAPIData = [
   [
     "DKI Jakarta",
@@ -56,32 +49,32 @@ const apiGeoJSON = toGeoJSON(mockAPIData);
 console.log(`API data converted: ${apiGeoJSON.features.length} locations`);
 console.log();
 
-// Example 4: Filter by province
-console.log("=== Example 4: Filter by Province ===");
+// Example 3: Filter by province
+console.log("=== Example 3: Filter by Province ===");
 const acehLocations = filter(allLocations, { province: "Aceh" });
 console.log(`Aceh locations: ${acehLocations.features.length}`);
 console.log();
 
-// Example 5: Filter by type
-console.log("=== Example 5: Filter by Type ===");
+// Example 4: Filter by type
+console.log("=== Example 4: Filter by Type ===");
 const pwxStations = filter(allLocations, { type: "pwx" });
 console.log(`PWX stations: ${pwxStations.features.length}`);
 console.log();
 
-// Example 6: Filter by bounding box (Java area)
-console.log("=== Example 6: Filter by Bounding Box (Java) ===");
+// Example 5: Filter by bounding box (Java area)
+console.log("=== Example 5: Filter by Bounding Box (Java) ===");
 const javaLocations = filterByBoundingBox(allLocations, 105, -8, 115, -5);
 console.log(`Java area locations: ${javaLocations.features.length}`);
 console.log();
 
-// Example 7: Combined filters (Aceh PWX stations)
-console.log("=== Example 7: Combined Filters (Aceh + PWX) ===");
+// Example 6: Combined filters (Aceh PWX stations)
+console.log("=== Example 6: Combined Filters (Aceh + PWX) ===");
 const acehPWX = filter(allLocations, { province: "Aceh", type: "pwx" });
 console.log(`Aceh PWX stations: ${acehPWX.features.length}`);
 console.log();
 
-// Example 8: Province with exclude kabupatens
-console.log("=== Example 8: Province + Exclude Kabupatens ===");
+// Example 7: Province with exclude kabupatens
+console.log("=== Example 7: Province + Exclude Kabupatens ===");
 const jawaTengahFiltered = filter(allLocations, {
   province: "Jawa Tengah",
   excludeKabupaten: ["Banyumas", "Cilacap"],
@@ -105,8 +98,8 @@ console.log(`  - Banyumas excluded: ${banyumas.features.length}`);
 console.log(`  - Cilacap excluded: ${cilacap.features.length}`);
 console.log();
 
-// Example 9: Multiple criteria at once
-console.log("=== Example 9: Multiple Criteria ===");
+// Example 8: Multiple criteria at once
+console.log("=== Example 8: Multiple Criteria ===");
 const complexFilter = filter(allLocations, {
   province: "Jawa Barat",
   kabupaten: "Bandung",
@@ -118,8 +111,8 @@ console.log(
 );
 console.log();
 
-// Example 10: Kecamatan filtering
-console.log("=== Example 10: Kecamatan Filtering ===");
+// Example 9: Kecamatan filtering
+console.log("=== Example 9: Kecamatan Filtering ===");
 const banyumasWithoutJatilawang = filter(allLocations, {
   kabupaten: "Banyumas",
   excludeKecamatan: ["Jatilawang"],
@@ -135,15 +128,15 @@ const purwokertoOnly = filter(allLocations, {
 console.log(`Purwokerto area only: ${purwokertoOnly.features.length}`);
 console.log();
 
-// Example 11: Display sample GeoJSON feature
-console.log("=== Example 11: Sample GeoJSON Feature ===");
+// Example 10: Display sample GeoJSON feature
+console.log("=== Example 10: Sample GeoJSON Feature ===");
 if (acehLocations.features.length > 0) {
   console.log(JSON.stringify(acehLocations.features[0], null, 2));
 }
 console.log();
 
-// Example 12: Save filtered data
-console.log("=== Example 12: Save Filtered Data ===");
+// Example 11: Save filtered data
+console.log("=== Example 11: Save Filtered Data ===");
 const outputPath = "./aceh-sample.geojson";
 saveGeoJSON(acehLocations, outputPath);
 console.log(`✅ Saved Aceh locations to: ${outputPath}`);

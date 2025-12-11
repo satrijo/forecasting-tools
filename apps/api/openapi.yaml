@@ -1,0 +1,980 @@
+openapi: 3.1.0
+info:
+  title: BMKG Weather API
+  description: |
+    REST API untuk mengambil data cuaca real-time dari stasiun cuaca BMKG Indonesia.
+    
+    ## Tipe Stasiun yang Didukung
+    - **AWS** (Automatic Weather Station) - Stasiun cuaca lengkap
+    - **AAWS** (Advanced AWS) - AWS dengan sensor tambahan
+    - **ARG** (Automatic Rain Gauge) - Pengukur curah hujan otomatis
+    - **ASRS** (Automatic Solar Radiation Station) - Stasiun radiasi matahari
+    - **Soil** - Stasiun kelembaban tanah
+    - **Iklimmikro** - Stasiun iklim mikro multi-level (4m, 7m, 10m)
+    
+    ## Format Response
+    - **JSON** (default) - Format standar dengan metadata
+    - **GeoJSON** - Format RFC 7946 untuk mapping/visualisasi
+  version: 1.0.0
+  contact:
+    name: BMKG Tools
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:3000
+    description: Development server
+
+tags:
+  - name: Info
+    description: Informasi API
+  - name: AWS
+    description: Data stasiun cuaca AWS/ARG
+  - name: Public
+    description: Data cuaca publik BMKG
+
+paths:
+  /:
+    get:
+      tags:
+        - Info
+      summary: API Information
+      description: Mendapatkan informasi API dan daftar endpoint yang tersedia
+      operationId: getApiInfo
+      responses:
+        '200':
+          description: Informasi API
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiInfo'
+
+  /aws:
+    get:
+      tags:
+        - AWS
+      summary: Get AWS/ARG Station Data
+      description: |
+        Fetch data cuaca dari stasiun AWS/ARG dengan berbagai filter.
+        
+        **Salah satu parameter berikut HARUS ada:**
+        - `province` - Fetch berdasarkan kode provinsi
+        - `city` - Fetch berdasarkan nama kota
+        - `lat` + `lon` + `radius` - Fetch berdasarkan radius dari koordinat
+        - `stations` - Fetch berdasarkan ID stasiun
+      operationId: getAwsData
+      parameters:
+        - name: province
+          in: query
+          description: |
+            Kode provinsi (comma-separated untuk multiple).
+            Contoh: `PR013` atau `PR013,PR015`
+          schema:
+            type: string
+          example: PR013
+        - name: city
+          in: query
+          description: |
+            Nama kota (comma-separated untuk multiple).
+            Gunakan underscore `_` untuk spasi.
+            Contoh: `cilacap` atau `banjar_baru`
+          schema:
+            type: string
+          example: cilacap
+        - name: stations
+          in: query
+          description: |
+            ID stasiun (comma-separated untuk multiple).
+            Contoh: `STA1101` atau `STA1101,STA1102`
+          schema:
+            type: string
+          example: STA1101
+        - name: lat
+          in: query
+          description: Latitude center point (wajib bersama `lon` dan `radius`)
+          schema:
+            type: number
+            minimum: -90
+            maximum: 90
+          example: -7.5
+        - name: lon
+          in: query
+          description: Longitude center point (wajib bersama `lat` dan `radius`)
+          schema:
+            type: number
+            minimum: -180
+            maximum: 180
+          example: 110.5
+        - name: radius
+          in: query
+          description: Radius dalam kilometer (wajib bersama `lat` dan `lon`)
+          schema:
+            type: number
+            minimum: 0
+          example: 50
+        - name: type
+          in: query
+          description: |
+            Filter tipe stasiun (comma-separated untuk multiple).
+            Values: `aws`, `aaws`, `arg`, `asrs`, `soil`, `iklimmikro`
+          schema:
+            type: string
+            enum: [aws, aaws, arg, asrs, soil, iklimmikro]
+          example: aws
+        - name: match
+          in: query
+          description: |
+            Mode pencarian untuk parameter `city`:
+            - `partial` (default) - Contains search
+            - `exact` - Exact match
+            - `startsWith` - Starts with
+          schema:
+            type: string
+            enum: [partial, exact, startsWith]
+            default: partial
+        - name: exclude
+          in: query
+          description: |
+            Exclude kota tertentu (comma-separated).
+            Hanya berlaku untuk city search.
+          schema:
+            type: string
+          example: banjarnegara,banjarmasin
+        - name: format
+          in: query
+          description: |
+            Format output response:
+            - `json` (default) - Format JSON standar
+            - `geojson` - Format GeoJSON RFC 7946
+          schema:
+            type: string
+            enum: [json, geojson]
+            default: json
+      responses:
+        '200':
+          description: Data stasiun berhasil diambil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AwsJsonResponse'
+            application/geo+json:
+              schema:
+                $ref: '#/components/schemas/AwsGeoJsonResponse'
+        '400':
+          description: Parameter tidak valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /public:
+    get:
+      tags:
+        - Public
+      summary: Public Weather API Info
+      description: Informasi endpoint data cuaca publik
+      operationId: getPublicInfo
+      responses:
+        '200':
+          description: Informasi API publik
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicApiInfo'
+
+  /public/nowcasting:
+    get:
+      tags:
+        - Public
+      summary: Get Nowcasting Data
+      description: |
+        Mendapatkan data nowcasting (prakiraan cuaca jangka pendek).
+        
+        Sumber data:
+        - `signature` (default) - dari signature.bmkg.go.id (JSON)
+        - `xml` / `databmkg` - dari www.bmkg.go.id (XML → JSON), memerlukan parameter `province`
+      operationId: getNowcasting
+      parameters:
+        - name: type
+          in: query
+          description: Tipe sumber data
+          schema:
+            type: string
+            enum: [signature, xml, databmkg]
+            default: signature
+        - name: code
+          in: query
+          description: Kode stasiun (untuk type=signature)
+          schema:
+            type: string
+            default: CJH
+          example: CJH
+        - name: province
+          in: query
+          description: |
+            Nama provinsi (WAJIB untuk type=xml/databmkg).
+            Gunakan underscore `_` untuk spasi.
+          schema:
+            type: string
+          example: jawa_tengah
+      responses:
+        '200':
+          description: Data nowcasting berhasil diambil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NowcastingResponse'
+        '400':
+          description: Parameter tidak valid (missing province, unsupported type)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Data tidak ditemukan untuk provinsi yang diminta
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /public/weather:
+    get:
+      tags:
+        - Public
+      summary: Get Public Weather Data
+      description: |
+        Mendapatkan data prakiraan cuaca publik.
+        Data dapat difilter berdasarkan provinsi, kabupaten, atau kecamatan.
+      operationId: getPublicWeather
+      parameters:
+        - name: province
+          in: query
+          description: Filter berdasarkan provinsi (gunakan underscore untuk spasi)
+          schema:
+            type: string
+          example: jawa_tengah
+        - name: kabupaten
+          in: query
+          description: Filter berdasarkan kabupaten/kota (gunakan underscore untuk spasi)
+          schema:
+            type: string
+          example: banyumas
+        - name: kecamatan
+          in: query
+          description: Filter berdasarkan kecamatan (gunakan underscore untuk spasi)
+          schema:
+            type: string
+          example: purwokerto_selatan
+        - name: format
+          in: query
+          description: |
+            Format output:
+            - `geojson` (default) - GeoJSON FeatureCollection dengan metadata
+            - `json` - JSON array dengan wrapper
+          schema:
+            type: string
+            enum: [geojson, json]
+            default: geojson
+      responses:
+        '200':
+          description: Data cuaca berhasil diambil
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/PublicWeatherJsonResponse'
+                  - $ref: '#/components/schemas/PublicWeatherGeoJsonResponse'
+            application/geo+json:
+              schema:
+                $ref: '#/components/schemas/PublicWeatherGeoJsonResponse'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    ApiInfo:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: BMKG Weather API
+        version:
+          type: string
+          example: '1.0.0'
+        documentation:
+          type: object
+          properties:
+            scalar:
+              type: string
+              example: /docs
+            swagger:
+              type: string
+              example: /swagger
+            redoc:
+              type: string
+              example: /redoc
+            openapi:
+              type: string
+              example: /openapi.yaml
+        endpoints:
+          type: object
+        examples:
+          type: object
+        stationTypes:
+          type: object
+
+    ErrorResponse:
+      type: object
+      required:
+        - success
+        - error
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          example: Error message here
+        details:
+          type: string
+          description: Additional error details (optional)
+        examples:
+          type: object
+          description: Usage examples (for 400 errors)
+        supported:
+          type: array
+          items:
+            type: string
+          description: List of supported values (for 400 errors)
+
+    AwsJsonResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        summary:
+          type: object
+          properties:
+            total:
+              type: integer
+              example: 33
+            successful:
+              type: integer
+              example: 32
+            failed:
+              type: integer
+              example: 1
+        stations:
+          type: array
+          items:
+            $ref: '#/components/schemas/StationData'
+        failed:
+          type: array
+          items:
+            $ref: '#/components/schemas/FailedStation'
+
+    StationData:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        stationId:
+          type: string
+          example: STA2201
+        stationName:
+          type: string
+          example: AWS Maritim Cilacap
+        city:
+          type: string
+          example: Kab. Cilacap
+        province:
+          type: string
+          example: Jawa Tengah
+        provinceCode:
+          type: string
+          example: PR013
+        lat:
+          type: string
+          example: '-7.724880'
+        lng:
+          type: string
+          example: '109.022964'
+        type:
+          type: string
+          enum: [aws, aaws, arg, asrs, soil, iklimmikro]
+          example: aws
+        data:
+          type: object
+          description: Raw data dari BMKG API
+
+    FailedStation:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        stationId:
+          type: string
+        error:
+          type: string
+          example: 'HTTP 404: Not Found'
+
+    AwsGeoJsonResponse:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [FeatureCollection]
+          example: FeatureCollection
+        features:
+          type: array
+          items:
+            $ref: '#/components/schemas/GeoJsonFeature'
+        metadata:
+          type: object
+          properties:
+            count:
+              type: integer
+              example: 14
+            generated:
+              type: string
+              format: date-time
+              example: '2025-12-11T08:45:30.123Z'
+            types:
+              type: object
+              additionalProperties:
+                type: integer
+              example:
+                aws: 10
+                arg: 4
+
+    GeoJsonFeature:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [Feature]
+          example: Feature
+        geometry:
+          type: object
+          properties:
+            type:
+              type: string
+              enum: [Point]
+              example: Point
+            coordinates:
+              type: array
+              items:
+                type: number
+              minItems: 2
+              maxItems: 2
+              example: [109.2389, -7.4297]
+        properties:
+          $ref: '#/components/schemas/GeoJsonProperties'
+
+    GeoJsonProperties:
+      type: object
+      properties:
+        id:
+          type: string
+          example: STA2201
+        name:
+          type: string
+          example: AWS Maritim Cilacap
+        city:
+          type: string
+          example: Kab. Cilacap
+        type:
+          type: string
+          enum: [aws, aaws, arg, asrs, soil, iklimmikro]
+          example: aws
+        province:
+          type: string
+          example: Jawa Tengah
+        provinceCode:
+          type: string
+          example: PR013
+        classification:
+          type: string
+          nullable: true
+        status:
+          $ref: '#/components/schemas/StationStatus'
+        weather:
+          oneOf:
+            - $ref: '#/components/schemas/AWSWeatherData'
+            - $ref: '#/components/schemas/ARGWeatherData'
+            - $ref: '#/components/schemas/SoilWeatherData'
+            - $ref: '#/components/schemas/IklimmikroWeatherData'
+            - $ref: '#/components/schemas/ASRSWeatherData'
+        loggerTemp:
+          type: number
+          nullable: true
+        distance:
+          type: number
+          description: Distance in km (only for radius queries)
+
+    StationStatus:
+      type: object
+      properties:
+        daysDiff:
+          type: integer
+          example: 0
+        hoursDiff:
+          type: integer
+          example: 0
+        minutesDiff:
+          type: integer
+          example: 15
+        lastUpdate:
+          type: string
+          example: '10 Desember 2025 12:06:00+00'
+        icon:
+          type: string
+          example: status_aws_1.png
+
+    AWSWeatherData:
+      type: object
+      description: Weather data untuk tipe AWS/AAWS
+      properties:
+        battery:
+          type: number
+          nullable: true
+          example: 12.9
+        temperature:
+          type: number
+          nullable: true
+          description: Suhu rata-rata (°C)
+          example: 28.6
+        temperatureMax:
+          type: number
+          nullable: true
+          description: Suhu maksimum (°C)
+          example: 31.1
+        temperatureMin:
+          type: number
+          nullable: true
+          description: Suhu minimum (°C)
+          example: 26.9
+        humidity:
+          type: number
+          nullable: true
+          description: Kelembaban rata-rata (%)
+          example: 76
+        rainfall:
+          type: number
+          nullable: true
+          description: Curah hujan (mm)
+          example: 0.0
+        pressure:
+          type: number
+          nullable: true
+          description: Tekanan udara (hPa)
+          example: 1009.2
+        solarRadiation:
+          type: number
+          nullable: true
+          description: Radiasi matahari rata-rata (W/m²)
+          example: 0.0
+        solarRadiationMax:
+          type: number
+          nullable: true
+          description: Radiasi matahari maksimum (W/m²)
+          example: 964.0
+        windSpeed:
+          type: number
+          nullable: true
+          description: Kecepatan angin rata-rata (m/s)
+          example: 0.6
+        windSpeedMax:
+          type: number
+          nullable: true
+          description: Kecepatan angin maksimum (m/s)
+          example: 1.1
+        windDirection:
+          type: number
+          nullable: true
+          description: Arah angin rata-rata (derajat)
+          example: 222
+        waterLevel:
+          type: number
+          nullable: true
+          description: Tinggi muka air (m)
+          example: 0.882
+        par:
+          type: number
+          nullable: true
+          description: Photosynthetically Active Radiation (µmol/m²/s)
+        windSpeed2m:
+          type: number
+          nullable: true
+          description: Kecepatan angin pada ketinggian 2m (m/s)
+
+    ARGWeatherData:
+      type: object
+      description: Weather data untuk tipe ARG (Automatic Rain Gauge)
+      properties:
+        battery:
+          type: number
+          nullable: true
+          example: 12.57
+        rainfall:
+          type: number
+          nullable: true
+          description: Curah hujan (mm)
+          example: 27.2
+
+    SoilWeatherData:
+      type: object
+      description: Weather data untuk tipe Soil (Soil Moisture Station)
+      properties:
+        battery:
+          type: number
+          nullable: true
+        swc:
+          type: number
+          nullable: true
+          description: Soil Water Content
+          example: -352.43
+        soilMoisture:
+          type: object
+          description: Kelembaban tanah pada berbagai kedalaman (%)
+          properties:
+            sm10:
+              type: number
+              nullable: true
+              description: Kedalaman 10cm
+            sm20:
+              type: number
+              nullable: true
+              description: Kedalaman 20cm
+            sm30:
+              type: number
+              nullable: true
+              description: Kedalaman 30cm
+            sm40:
+              type: number
+              nullable: true
+              description: Kedalaman 40cm
+            sm60:
+              type: number
+              nullable: true
+              description: Kedalaman 60cm
+            sm100:
+              type: number
+              nullable: true
+              description: Kedalaman 100cm
+        soilTemperature:
+          type: object
+          description: Suhu tanah pada berbagai kedalaman (°C)
+          properties:
+            ts10:
+              type: number
+              nullable: true
+              description: Kedalaman 10cm
+            ts20:
+              type: number
+              nullable: true
+              description: Kedalaman 20cm
+            ts30:
+              type: number
+              nullable: true
+              description: Kedalaman 30cm
+            ts40:
+              type: number
+              nullable: true
+              description: Kedalaman 40cm
+            ts60:
+              type: number
+              nullable: true
+              description: Kedalaman 60cm
+            ts100:
+              type: number
+              nullable: true
+              description: Kedalaman 100cm
+
+    IklimmikroWeatherData:
+      type: object
+      description: Weather data untuk tipe Iklimmikro (Multi-level measurements)
+      properties:
+        battery:
+          type: number
+          nullable: true
+        level4m:
+          $ref: '#/components/schemas/IklimmikroLevelData'
+        level7m:
+          $ref: '#/components/schemas/IklimmikroLevelData'
+        level10m:
+          $ref: '#/components/schemas/IklimmikroLevelData'
+
+    IklimmikroLevelData:
+      type: object
+      description: Data pengukuran pada ketinggian tertentu
+      properties:
+        temperature:
+          type: number
+          nullable: true
+          description: Suhu saat ini (°C)
+        temperatureMin:
+          type: number
+          nullable: true
+          description: Suhu minimum (°C)
+        temperatureAvg:
+          type: number
+          nullable: true
+          description: Suhu rata-rata (°C)
+        temperatureMax:
+          type: number
+          nullable: true
+          description: Suhu maksimum (°C)
+        humidity:
+          type: number
+          nullable: true
+          description: Kelembaban saat ini (%)
+        humidityMin:
+          type: number
+          nullable: true
+          description: Kelembaban minimum (%)
+        humidityAvg:
+          type: number
+          nullable: true
+          description: Kelembaban rata-rata (%)
+        humidityMax:
+          type: number
+          nullable: true
+          description: Kelembaban maksimum (%)
+        windSpeed:
+          type: number
+          nullable: true
+          description: Kecepatan angin saat ini (m/s)
+        windSpeedMin:
+          type: number
+          nullable: true
+          description: Kecepatan angin minimum (m/s)
+        windSpeedAvg:
+          type: number
+          nullable: true
+          description: Kecepatan angin rata-rata (m/s)
+        windSpeedMax:
+          type: number
+          nullable: true
+          description: Kecepatan angin maksimum (m/s)
+        windDirection:
+          type: number
+          nullable: true
+          description: Arah angin (derajat)
+
+    ASRSWeatherData:
+      type: object
+      description: Weather data untuk tipe ASRS (Automatic Solar Radiation Station)
+      properties:
+        battery:
+          type: number
+          nullable: true
+        diffuseRadiation:
+          type: number
+          nullable: true
+          description: Radiasi diffuse (W/m²)
+          example: 0.0
+        globalRadiation:
+          type: number
+          nullable: true
+          description: Radiasi global (W/m²)
+          example: 0.0
+        directNormalIrradiance:
+          type: number
+          nullable: true
+          description: Direct Normal Irradiance / DNI (W/m²)
+          example: 95.4
+        reflectedRadiation:
+          type: number
+          nullable: true
+          description: Radiasi yang dipantulkan (W/m²)
+          example: 0.8
+        netRadiation:
+          type: number
+          nullable: true
+          description: Radiasi bersih (W/m²)
+          example: -0.8
+        sunshineMinutes:
+          type: number
+          nullable: true
+          description: Durasi penyinaran matahari (menit)
+          example: 271
+
+    PublicApiInfo:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: BMKG Public Weather API
+        version:
+          type: string
+          example: '1.0.0'
+        endpoints:
+          type: object
+          properties:
+            nowcasting:
+              type: string
+              example: /public/nowcasting - Nowcasting data
+            weather:
+              type: string
+              example: /public/weather - Weather forecast data (GeoJSON)
+        examples:
+          type: object
+
+    NowcastingResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        source:
+          type: string
+          example: signature.bmkg.go.id
+          description: Sumber data (signature.bmkg.go.id atau www.bmkg.go.id)
+        code:
+          type: string
+          example: CJH
+          description: Kode stasiun (untuk type=signature)
+        province:
+          type: string
+          example: Jawa Tengah
+          description: Nama provinsi (untuk type=xml/databmkg)
+        data:
+          type: object
+          description: Data nowcasting dari BMKG
+
+    PublicWeatherJsonResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        count:
+          type: integer
+          example: 150
+          description: Jumlah data yang dikembalikan
+        filters:
+          type: object
+          properties:
+            province:
+              type: string
+              nullable: true
+            kabupaten:
+              type: string
+              nullable: true
+            kecamatan:
+              type: string
+              nullable: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicWeatherFeature'
+
+    PublicWeatherGeoJsonResponse:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [FeatureCollection]
+        features:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicWeatherFeature'
+        metadata:
+          type: object
+          properties:
+            success:
+              type: boolean
+              example: true
+            count:
+              type: integer
+              example: 150
+            filters:
+              type: object
+              properties:
+                province:
+                  type: string
+                  nullable: true
+                kabupaten:
+                  type: string
+                  nullable: true
+                kecamatan:
+                  type: string
+                  nullable: true
+            generated:
+              type: string
+              format: date-time
+              example: '2025-12-11T08:45:30.123Z'
+
+    PublicWeatherFeature:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [Feature]
+        geometry:
+          type: object
+          properties:
+            type:
+              type: string
+              enum: [Point]
+            coordinates:
+              type: array
+              items:
+                type: number
+              minItems: 2
+              maxItems: 2
+        properties:
+          type: object
+          properties:
+            id:
+              type: string
+            province:
+              type: string
+            kabupaten:
+              type: string
+            kecamatan:
+              type: string
+            timestamp:
+              type: string
+            type:
+              type: string
+            weather:
+              type: object
+              nullable: true
+              properties:
+                humidity:
+                  type: string
+                temperature:
+                  type: string
+                rainfall:
+                  type: string
+                windDirection:
+                  type: string
+                windSpeed:
+                  type: string

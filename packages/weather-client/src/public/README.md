@@ -24,3 +24,5 @@ Weather forecast data will be sourced from:
 - https://signature.bmkg.go.id/dwt/asset/boot/api_dwt2.php?type=lokasiCuaca&lon=109.11552349560588&lat=-7.656747622457885
 - https://signature.bmkg.go.id/dwt/asset/boot/api_dwt2.php?type=getForecastDarat&code=202512111800.json
 - https://signature.bmkg.go.id/dwt/asset/boot/api_dwt2.php?type=getManifest&code=jalurDarat
+- https://www.bmkg.go.id/alerts/nowcast/id/CJH20251210002_alert.xml
+- https://signature.bmkg.go.id/dwt/asset/boot/api_dwt2.php?type=nowcasting&code=CJH

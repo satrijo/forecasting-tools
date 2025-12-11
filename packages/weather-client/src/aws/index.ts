@@ -3,14 +3,12 @@
  * Fetch data AWS berdasarkan kode provinsi dari location.json
  */
 
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
-import { BMKGAuth } from "./bmkg-auth.ts";
+import * as fs from "fs";
+import * as path from "path";
+import { BMKGAuth } from "./bmkg-auth";
 
-// Get current directory
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Get current directory using Bun's import.meta.dir
+const __dirname = import.meta.dir;
 
 class AWSDataFetcher {
   auth: any;
@@ -34,26 +32,62 @@ class AWSDataFetcher {
    * Filter station berdasarkan kode provinsi dan tipe (opsional)
    * @param {Array} provinceCodes - Array kode provinsi
    * @param {String|Array} type - Tipe station ("aws", "arg", ["aws", "arg"], atau null untuk semua)
+   * @param {String|Array} city - Filter hanya kota tertentu (partial match, case-insensitive)
+   * @param {String|Array} excludeCity - Exclude kota tertentu (partial match, case-insensitive)
    */
   getStationsByProvince(
     provinceCodes: any[],
     type: string | string[] | null = "aws",
+    city: string | string[] | null = null,
+    excludeCity: string | string[] | null = null,
   ) {
+    // Normalize city filters to lowercase arrays
+    const cityList = city
+      ? (Array.isArray(city) ? city : [city]).map((c) =>
+          c.replace(/_/g, " ").toLowerCase(),
+        )
+      : [];
+
+    const excludeCityList = excludeCity
+      ? (Array.isArray(excludeCity) ? excludeCity : [excludeCity]).map((c) =>
+          c.replace(/_/g, " ").toLowerCase(),
+        )
+      : [];
+
     return this.locations.filter((loc) => {
       const matchProvince = provinceCodes.includes(loc.kode_provinsi);
 
+      // Check province match first
+      if (!matchProvince) return false;
+
+      const locationCity = loc.nama_kota.toLowerCase();
+
+      // Check exclude city
+      if (excludeCityList.length > 0) {
+        const isExcluded = excludeCityList.some((excl) =>
+          locationCity.includes(excl),
+        );
+        if (isExcluded) return false;
+      }
+
+      // Check include city filter
+      if (cityList.length > 0) {
+        const matchCity = cityList.some((c) => locationCity.includes(c));
+        if (!matchCity) return false;
+      }
+
       // Jika type null/kosong, ambil semua
       if (!type) {
-        return matchProvince;
+        return true;
       }
 
       // Jika type array, cek apakah loc.type ada di array
       if (Array.isArray(type)) {
-        return matchProvince && type.includes(loc.type);
+        return type.includes(loc.type);
       }
 
       // Jika type string, cek exact match
-      return matchProvince && loc.type === type;
+      return loc.type === type;
     });
   }
 
@@ -325,13 +359,22 @@ class AWSDataFetcher {
    * Main: Fetch data berdasarkan kode provinsi
    * @param {Array} provinceCodes - Array kode provinsi
    * @param {String|Array} type - Tipe station ("aws", "arg", ["aws", "arg"], null untuk semua)
+   * @param {String|Array} city - Filter hanya kota tertentu (partial match, case-insensitive)
+   * @param {String|Array} excludeCity - Exclude kota tertentu (partial match, case-insensitive)
    */
   async fetchDataByProvince(
     provinceCodes: any[],
     type: string | string[] | null = null,
+    city: string | string[] | null = null,
+    excludeCity: string | string[] | null = null,
   ) {
     // 1. Filter stations dari location.json
-    const stations = this.getStationsByProvince(provinceCodes, type);
+    const stations = this.getStationsByProvince(
+      provinceCodes,
+      type,
+      city,
+      excludeCity,
+    );
 
     const typeLabel = Array.isArray(type)
       ? type.join(" & ")
@@ -346,6 +389,18 @@ class AWSDataFetcher {
         stations.find((s) => s.kode_provinsi === code)?.nama_provinsi || code;
       console.log(`  - ${provName} (${code}): ${count} stations`);
     });
+
+    if (city) {
+      const cityLabel = Array.isArray(city) ? city.join(", ") : city;
+      console.log(`  Filtered by city: ${cityLabel}`);
+    }
+
+    if (excludeCity) {
+      const excludeLabel = Array.isArray(excludeCity)
+        ? excludeCity.join(", ")
+        : excludeCity;
+      console.log(`  Excluded cities: ${excludeLabel}`);
+    }
 
     // 2. Fetch data untuk setiap station (includeLocationInfo = true by default)
     console.log("Fetching data...");

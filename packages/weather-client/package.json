@@ -9,7 +9,7 @@
     "./aws": "./src/aws/index.ts",
     "./awos": "./src/awos/index.ts",
     "./geojson": "./src/geojson/index.ts",
-    "./weather": "./src/weather/index.ts"
+    "./public": "./src/public/index.ts"
   },
   "scripts": {
     "test": "bun test",
@@ -25,5 +25,8 @@
     "aws",
     "awos",
     "meteorology"
-  ]
+  ],
+  "dependencies": {
+    "fast-xml-parser": "^5.3.2"
+  }
 }
