@@ -12,8 +12,6 @@ import { BMKGAuth } from "./bmkg-auth";
 // The `assert { type: "json" }` syntax is supported by modern bundlers.
 import locationData from "./location.json" assert { type: "json" };
 
-
-
 class AWSDataFetcher {
   auth: any;
   locations: Array<any>;
