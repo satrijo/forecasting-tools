@@ -1,6 +1,6 @@
 {
   // Nama worker di Cloudflare (pilih yang unik)
-  "name": "bmkg-weather-api",
+  "name": "tools",
 
   // Tanggal kompatibilitas – gunakan tanggal hari ini atau yang lebih baru
   "compatibility_date": "2025-12-21",
