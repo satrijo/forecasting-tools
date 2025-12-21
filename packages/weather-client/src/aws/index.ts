@@ -7,8 +7,24 @@ import * as fs from "fs";
 import * as path from "path";
 import { BMKGAuth } from "./bmkg-auth";
 
-// Get current directory using Bun's import.meta.dir
-const __dirname = import.meta.dir;
+// Static import of the location JSON. This works in Bun, Node, and when the code is
+// bundled for Cloudflare Workers (the JSON is inlined into the bundle).
+// The `assert { type: "json" }` syntax is supported by modern bundlers.
+import locationData from "./location.json" assert { type: "json" };
+
+// Determine the directory of this file for environments where we still need to
+// read files from the filesystem (local development with Bun). In Cloudflare
+// Workers `import.meta.dir` is undefined, but the fallback will never be used
+// because we rely on the static JSON import above.
+let __dirname: string;
+if (typeof import.meta !== "undefined" && typeof (import.meta as any).dir !== "undefined") {
+  __dirname = (import.meta as any).dir; // Bun / Node environment
+} else {
+  const url = new URL(import.meta.url);
+  const parts = url.pathname.split("/");
+  parts.pop();
+  __dirname = parts.join("/");
+}
 
 class AWSDataFetcher {
   auth: any;
@@ -22,10 +38,21 @@ class AWSDataFetcher {
   /**
    * Load data dari location.json
    */
+  // Load location data. In a Cloudflare Worker we cannot read from the file system,
+  // so we import the JSON at build time. The JSON file is bundled by Bun/TS.
+  // The `assert { type: "json" }` syntax works with modern bundlers.
+  // If the runtime does not support JSON imports, the fallback is to use the
+  // previously‑used file‑system method (which works locally with Bun).
   loadLocations() {
-    const locationPath = path.join(__dirname, "location.json");
-    const data = fs.readFileSync(locationPath, "utf-8");
-    return JSON.parse(data);
+    // Use static import for Cloudflare Workers and modern bundlers
+    try {
+      return (locationData as any) ?? [];
+    } catch (e) {
+      // Fallback for local Bun/Node where static import may not work
+      const locationPath = path.join(__dirname, "location.json");
+      const raw = fs.readFileSync(locationPath, "utf-8");
+      return JSON.parse(raw);
+    }
   }
 
   /**
