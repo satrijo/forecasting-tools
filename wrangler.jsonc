@@ -4,6 +4,9 @@
 
   // Tanggal kompatibilitas – gunakan tanggal hari ini atau yang lebih baru
   "compatibility_date": "2025-12-21",
+  // Enable Node.js built‑in modules (e.g., "path", "fs") in Workers.
+  // Required because the bundled API imports Node's "path" module.
+  "compatibility_flags": ["nodejs_compat"],
 
   // ID akun Cloudflare Anda.
   // Dapatkan dari dashboard Cloudflare → Workers → Settings → Account ID
