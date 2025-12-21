@@ -1,11 +1,12 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import * as fs from "fs";
-import * as path from "path";
 import rootRoute from "./routes/index";
 import awsRoute from "./routes/aws";
 import publicRoute from "./routes/public";
 import mcpRoute from "./routes/mcp";
+// Import the OpenAPI spec as a plain text string. This works both in Bun/Node and in
+// Cloudflare Workers because the JSON import is inlined into the bundle.
+import openapiSpec from "../openapi.yaml" assert { type: "text" };
 
 const app = new Hono();
 
