@@ -12,22 +12,7 @@ import { BMKGAuth } from "./bmkg-auth";
 // The `assert { type: "json" }` syntax is supported by modern bundlers.
 import locationData from "./location.json" assert { type: "json" };
 
-// Determine the directory of this file for environments where we still need to
-// read files from the filesystem (local development with Bun). In Cloudflare
-// Workers `import.meta.dir` is undefined, but the fallback will never be used
-// because we rely on the static JSON import above.
-let __dirname: string;
-if (
-  typeof import.meta !== "undefined" &&
-  typeof (import.meta as any).dir !== "undefined"
-) {
-  __dirname = (import.meta as any).dir; // Bun / Node environment
-} else {
-  const url = new URL(import.meta.url);
-  const parts = url.pathname.split("/");
-  parts.pop();
-  __dirname = parts.join("/");
-}
+
 
 class AWSDataFetcher {
   auth: any;
