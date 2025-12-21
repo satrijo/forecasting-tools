@@ -1,7 +1,7 @@
 {
   // Nama worker di Cloudflare (pilih yang unik)
-  "name": "bmkg-weather-api",
-
+  // wrangler.jsonc
+  "name": "tools",
   // Tanggal kompatibilitas – gunakan tanggal hari ini atau yang lebih baru
   "compatibility_date": "2025-12-21",
   // Enable Node.js built‑in modules (e.g., "path", "fs") in Workers.
