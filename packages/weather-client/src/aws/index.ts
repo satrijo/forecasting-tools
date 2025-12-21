@@ -17,7 +17,10 @@ import locationData from "./location.json" assert { type: "json" };
 // Workers `import.meta.dir` is undefined, but the fallback will never be used
 // because we rely on the static JSON import above.
 let __dirname: string;
-if (typeof import.meta !== "undefined" && typeof (import.meta as any).dir !== "undefined") {
+if (
+  typeof import.meta !== "undefined" &&
+  typeof (import.meta as any).dir !== "undefined"
+) {
   __dirname = (import.meta as any).dir; // Bun / Node environment
 } else {
   const url = new URL(import.meta.url);
