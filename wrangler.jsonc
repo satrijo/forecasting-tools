@@ -1,0 +1,35 @@
+{
+  // Nama worker di Cloudflare (pilih yang unik)
+  "name": "bmkg-weather-api",
+
+  // Tanggal kompatibilitas – gunakan tanggal hari ini atau yang lebih baru
+  "compatibility_date": "2025-12-21",
+
+  // ID akun Cloudflare Anda.
+  // Dapatkan dari dashboard Cloudflare → Workers → Settings → Account ID
+  // atau dari file ~/.wrangler/config/default.toml (account_id = "...").
+
+  // Entry‑point JavaScript yang akan dijalankan oleh Workers.
+  // Setelah `bun run build` di folder apps/api, file hasil bundling berada di:
+  //   apps/api/dist/index.js
+  // (atau `index.mjs` tergantung konfigurasi Bun – sesuaikan bila berbeda)
+  "main": "./apps/api/dist/index.js",
+  // Karena Anda hanya meng‑upload API, tidak ada static assets.
+  // Jika di masa depan ingin men‑serve file statis, tambahkan blok [assets] di sini.
+  // "assets": {
+  //   "directory": "./dist"
+  // },
+
+  // (Opsional) Jika worker membutuhkan variabel lingkungan, daftarkan di sini.
+  // Nilai‑nilai ini akan tersedia di `process.env` (atau `import.meta.env` pada Bun).
+  // "vars": {
+  //   "BMKG_USERNAME": "your_username",
+  //   "BMKG_PASSWORD": "your_password"
+  // },
+
+  // (Opsional) Jika Anda ingin meng‑expose worker lewat domain khusus,
+  // tambahkan route atau zone‑id di sini.
+  // "routes": [
+  //   { "pattern": "api.example.com/*", "zone_id": "YOUR_ZONE_ID" }
+  // ]
+}
