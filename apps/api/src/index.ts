@@ -5,6 +5,7 @@ import * as path from "path";
 import rootRoute from "./routes/index";
 import awsRoute from "./routes/aws";
 import publicRoute from "./routes/public";
+import mcpRoute from "./routes/mcp";
 
 const app = new Hono();
 
@@ -42,5 +43,6 @@ app.get("/docs", (c) => {
 app.route("/", rootRoute);
 app.route("/aws", awsRoute);
 app.route("/public", publicRoute);
+app.route("/mcp", mcpRoute);
 
 export default app;

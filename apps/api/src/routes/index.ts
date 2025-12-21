@@ -14,6 +14,7 @@ root.get("/", (c) => {
     endpoints: {
       aws: "/aws - Automatic Weather Station data (AWS, AAWS, ARG, ASRS, Soil, Iklimmikro)",
       public: "/public - Public weather data (Nowcasting, Weather forecast)",
+      mcp: "/mcp - Model Context Protocol server for weather data integration",
     },
     examples: {
       aws: {
