@@ -47,15 +47,8 @@ class AWSDataFetcher {
   // If the runtime does not support JSON imports, the fallback is to use the
   // previously‑used file‑system method (which works locally with Bun).
   loadLocations() {
-    // Use static import for Cloudflare Workers and modern bundlers
-    try {
-      return (locationData as any) ?? [];
-    } catch (e) {
-      // Fallback for local Bun/Node where static import may not work
-      const locationPath = path.join(__dirname, "location.json");
-      const raw = fs.readFileSync(locationPath, "utf-8");
-      return JSON.parse(raw);
-    }
+    // Always use static import for Cloudflare Workers and modern bundlers
+    return (locationData as any) ?? [];
   }
 
   /**
