@@ -3,6 +3,21 @@ import { Hono } from "hono";
 const root = new Hono();
 
 root.get("/", (c) => {
+  const accept = c.req.header("Accept");
+  if (accept && accept.includes("text/event-stream")) {
+    // SSE transport for MCP
+    return new Response(
+      `event: endpoint\ndata: {"url": "https://tools.codeverflow.workers.dev/"}\n\n`,
+      {
+        headers: {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          Connection: "keep-alive",
+          "Access-Control-Allow-Origin": "*",
+        },
+      },
+    );
+  }
   return c.json({
     success: true,
     message: "BMKG Weather API",

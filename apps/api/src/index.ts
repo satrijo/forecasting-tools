@@ -41,9 +41,9 @@ app.get("/docs", (c) => {
 });
 
 // Mount routes
-app.route("/", rootRoute);
+app.route("/", mcpRoute);
+app.route("/api", rootRoute);
 app.route("/aws", awsRoute);
 app.route("/public", publicRoute);
-app.route("/mcp", mcpRoute);
 
 export default app;

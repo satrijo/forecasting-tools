@@ -82,6 +82,28 @@ export interface LocationWeatherResponse {
   };
 }
 
+/** Response from getForecastByAdm4 */
+export interface ForecastByAdm4Response {
+  status: number;
+  data: {
+    lokasi: LocationInfo;
+    prakiraan: {
+      datetime: string;
+      t: number; // Temperature
+      weather: number; // Weather code
+      weather_desc: string;
+      weather_desc_en: string;
+      wd_deg: number; // Wind direction degrees
+      wd: string; // Wind direction cardinal
+      ws: number; // Wind speed
+      hu: number; // Humidity
+      tcc: number; // Cloud cover
+      tp: number; // Precipitation
+      image: string;
+    }[];
+  };
+}
+
 class PublicWeather {
   private xmlParser: XMLParser;
 
@@ -100,12 +122,19 @@ class PublicWeather {
 
   getLocationWeatherByCode(code: string): Promise<LocationWeatherResponse> {
     const url = `https://signature.bmkg.go.id/dwt/asset/boot/api_dwt2.php?type=lokasiCuaca&code=${code}`;
-    return fetch(url).then((res) => res.json() as Promise<LocationWeatherResponse>);
+    return fetch(url).then(
+      (res) => res.json() as Promise<LocationWeatherResponse>,
+    );
   }
 
-  getLocationWeather(lat: number, lon: number): Promise<LocationWeatherResponse> {
+  getLocationWeather(
+    lat: number,
+    lon: number,
+  ): Promise<LocationWeatherResponse> {
     const url = `https://signature.bmkg.go.id/dwt/asset/boot/api_dwt2.php?type=lokasiCuaca&lon=${lon}&lat=${lat}`;
-    return fetch(url).then((res) => res.json() as Promise<LocationWeatherResponse>);
+    return fetch(url).then(
+      (res) => res.json() as Promise<LocationWeatherResponse>,
+    );
   }
 
   getForecastDarat(code: string) {
@@ -161,6 +190,18 @@ class PublicWeather {
   async getNowcastingXML(url: string) {
     const xmlString = await fetch(url).then((res) => res.text());
     return this.xmlParser.parse(xmlString);
+  }
+
+  /**
+   * Get weather forecast by ADM4 code (desa/kelurahan level)
+   * @param adm4 ADM4 code (e.g., "31.71.03.1001")
+   * @returns Promise<ForecastByAdm4Response>
+   */
+  getForecastByAdm4(adm4: string): Promise<ForecastByAdm4Response> {
+    const url = `https://api.bmkg.go.id/publik/prakiraan-cuaca?adm4=${adm4}`;
+    return fetch(url).then(
+      (res) => res.json() as Promise<ForecastByAdm4Response>,
+    );
   }
 }
 
