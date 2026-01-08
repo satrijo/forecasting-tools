@@ -7,6 +7,8 @@ import mcpRoute from "./routes/mcp";
 // Import the OpenAPI spec as a plain text string. This works both in Bun/Node and in
 // Cloudflare Workers because the JSON import is inlined into the bundle.
 import openapiSpec from "../openapi.yaml" assert { type: "text" };
+import { readFileSync } from "fs";
+import { join } from "path";
 
 const app = new Hono();
 
@@ -15,8 +17,8 @@ app.use("*", cors());
 
 // Serve OpenAPI spec with correct content type
 app.get("/openapi.yaml", (c) => {
-  const filePath = path.join(import.meta.dir, "../openapi.yaml");
-  const content = fs.readFileSync(filePath, "utf-8");
+  const filePath = join(import.meta.dir, "../openapi.yaml");
+  const content = readFileSync(filePath, "utf-8");
   return c.text(content, 200, {
     "Content-Type": "text/yaml; charset=utf-8",
   });
@@ -41,9 +43,12 @@ app.get("/docs", (c) => {
 });
 
 // Mount routes
-app.route("/", mcpRoute);
+app.route("/mcp", mcpRoute);
 app.route("/api", rootRoute);
 app.route("/aws", awsRoute);
 app.route("/public", publicRoute);
 
-export default app;
+// Export for Cloudflare Workers
+export default {
+  fetch: app.fetch,
+};

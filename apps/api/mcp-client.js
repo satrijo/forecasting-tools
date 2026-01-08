@@ -59,7 +59,7 @@ class MCPClient {
 }
 
 async function runInteractiveTest(
-  serverUrl = "https://tools.codeverflow.workers.dev",
+  serverUrl = "https://tools.codeverflow.workers.dev/mcp",
 ) {
   const client = new MCPClient(serverUrl);
 
@@ -156,7 +156,7 @@ async function runInteractiveTest(
 }
 
 async function runQuickTest(
-  serverUrl = "https://tools.codeverflow.workers.dev",
+  serverUrl = "https://tools.codeverflow.workers.dev/mcp",
 ) {
   const client = new MCPClient(serverUrl);
 
@@ -216,10 +216,10 @@ Usage:
 
 Examples:
   node mcp-client.js
-  node mcp-client.js https://tools.codeverflow.workers.dev
+  node mcp-client.js https://tools.codeverflow.workers.dev/mcp
   node mcp-client.js --quick
 
-Default server URL: https://tools.codeverflow.workers.dev
+Default server URL: https://tools.codeverflow.workers.dev/mcp
   `);
 } else if (command === "quick") {
   runQuickTest(serverUrl);

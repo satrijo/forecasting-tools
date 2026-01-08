@@ -24,15 +24,22 @@
   // },
 
   // (Opsional) Jika worker membutuhkan variabel lingkungan, daftarkan di sini.
-  // Nilai‑nilai ini akan tersedia di `process.env` (atau `import.meta.env` pada Bun).
-  // "vars": {
-  //   "BMKG_USERNAME": "your_username",
-  //   "BMKG_PASSWORD": "your_password"
-  // },
-
+  // Nilai-nilai ini akan tersedia di `process.env` (atau `import.meta.env` pada Bun).
+  "vars": {
+    "BMKG_USERNAME": "96805",
+    "BMKG_PASSWORD": "96805@14012021",
+  },
   // (Opsional) Jika Anda ingin meng‑expose worker lewat domain khusus,
   // tambahkan route atau zone‑id di sini.
   // "routes": [
   //   { "pattern": "api.example.com/*", "zone_id": "YOUR_ZONE_ID" }
   // ]
+  "observability": {
+    "logs": {
+      "enabled": false,
+      "head_sampling_rate": 1,
+      "invocation_logs": true,
+      "persist": true,
+    },
+  },
 }

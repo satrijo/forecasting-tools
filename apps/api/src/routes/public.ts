@@ -1,5 +1,9 @@
 import { Hono } from "hono";
-import { PublicWeather, publicToGeoJSON, filterPublicGeoJSON } from "weather-client";
+import {
+  PublicWeather,
+  publicToGeoJSON,
+  filterPublicGeoJSON,
+} from "weather-client";
 
 const publicRoute = new Hono();
 
@@ -17,15 +21,26 @@ publicRoute.get("/", (c) => {
       nowcasting: "/public/nowcasting?code=CJH",
       nowcastingXML: "/public/nowcasting?type=xml&province=jawa_tengah",
       weather: "/public/weather",
-      weatherFiltered: "/public/weather?province=jawa_tengah&kabupaten=banyumas",
+      weatherFiltered:
+        "/public/weather?province=jawa_tengah&kabupaten=banyumas",
       locationByCode: "/public/location?code=33.01.22.1003",
       locationByCoords: "/public/location?lat=-7.656747&lon=109.115523",
     },
   });
 });
 
+/**
+ * GET /public/nowcasting
+ *
+ * Query Parameters:
+ * - type: "databmkg" (default), "signature", or "databmkg"
+ * - code: Nowcasting code (e.g., "CJH") for signature type
+ * - province: Province name (e.g., "jawa_tengah") for xml/databmkg type
+ *
+ */
+
 publicRoute.get("/nowcasting", async (c) => {
-  const typeParam = c.req.query("type") || "signature";
+  const typeParam = c.req.query("type") || "databmkg";
   const codeParam = c.req.query("code") || "CJH";
   const provinceParam = c.req.query("province")?.replace(/_/g, " ");
 
@@ -44,30 +59,139 @@ publicRoute.get("/nowcasting", async (c) => {
     } else if (typeParam === "xml" || typeParam === "databmkg") {
       // Fetch from www.bmkg.go.id (XML → JSON)
       if (!provinceParam) {
-        return c.json(
-          {
-            success: false,
-            error: "Province parameter is required for XML/databmkg type",
-            example: "/public/nowcasting?type=xml&province=jawa_tengah",
-          },
-          400,
-        );
+        // Return list of active provinces with nowcasting data
+        try {
+          const allData = await publicWeather.getNowcastingXMLLatest();
+
+          if (!allData?.rss?.channel?.item) {
+            return c.json(
+              {
+                success: false,
+                error: "Tidak dapat mengambil data nowcasting aktif",
+              },
+              500,
+            );
+          }
+
+          const items = Array.isArray(allData.rss.channel.item)
+            ? allData.rss.channel.item
+            : [allData.rss.channel.item];
+
+          // Extract unique provinces from titles
+          const provinces = items
+            .map((item: any) => {
+              if (!item.title) return null;
+              // Extract province name from title (format varies, but usually ends with province name)
+              const title = item.title;
+              // Look for province names in the title, typically after "di" or at the end
+              const provincePatterns = [
+                /di\s+([^,]+),?/i, // "di PROVINSI,"
+                /di\s+([^.]+)\.?$/i, // "di PROVINSI."
+                /\s+([^,]+),?\s*$/i, // Last part before comma or end
+              ];
+
+              for (const pattern of provincePatterns) {
+                const match = title.match(pattern);
+                if (match && match[1]) {
+                  return match[1].trim();
+                }
+              }
+
+              // Fallback: try to extract from known province keywords
+              const knownProvinces = [
+                "Aceh",
+                "Sumatera Utara",
+                "Sumatera Barat",
+                "Riau",
+                "Kepulauan Riau",
+                "Jambi",
+                "Sumatera Selatan",
+                "Bangka Belitung",
+                "Bengkulu",
+                "Lampung",
+                "DKI Jakarta",
+                "Jawa Barat",
+                "Jawa Tengah",
+                "DI Yogyakarta",
+                "Jawa Timur",
+                "Banten",
+                "Bali",
+                "Nusa Tenggara Barat",
+                "Nusa Tenggara Timur",
+                "Kalimantan Barat",
+                "Kalimantan Tengah",
+                "Kalimantan Selatan",
+                "Kalimantan Timur",
+                "Kalimantan Utara",
+                "Sulawesi Utara",
+                "Gorontalo",
+                "Sulawesi Tengah",
+                "Sulawesi Barat",
+                "Sulawesi Selatan",
+                "Sulawesi Tenggara",
+                "Maluku",
+                "Maluku Utara",
+                "Papua",
+                "Papua Barat",
+                "Papua Selatan",
+                "Papua Tengah",
+                "Papua Pegunungan",
+              ];
+
+              for (const province of knownProvinces) {
+                if (title.toLowerCase().includes(province.toLowerCase())) {
+                  return province;
+                }
+              }
+
+              return null;
+            })
+            .filter((province: string | null) => province !== null)
+            .filter(
+              (province: string, index: number, arr: string[]) =>
+                arr.indexOf(province) === index, // Remove duplicates
+            )
+            .sort(); // Sort alphabetically
+
+          return c.json({
+            success: true,
+            source: "www.bmkg.go.id",
+            type: "active_provinces_list",
+            count: provinces.length,
+            provinces,
+            last_updated: allData.rss.channel.lastBuildDate || null,
+          });
+        } catch (error) {
+          const errorMessage =
+            error instanceof Error ? error.message : String(error);
+          return c.json(
+            {
+              success: false,
+              error: "Failed to fetch active provinces list",
+              details: errorMessage,
+            },
+            500,
+          );
+        }
       }
 
       try {
-        const latest = await publicWeather.getNowcastingXMLLatest(provinceParam);
-        
+        const latest =
+          await publicWeather.getNowcastingXMLLatest(provinceParam);
+
         if (!latest?.nowcasting?.[0]?.link) {
           return c.json(
             {
               success: false,
-              error: `No nowcasting data found for province: ${provinceParam}`,
+              error: `Tidak ada peringatan dini cuaca ekstrem untuk provinsi: ${provinceParam}`,
             },
             404,
           );
         }
 
-        const data = await publicWeather.getNowcastingXML(latest.nowcasting[0].link);
+        const data = await publicWeather.getNowcastingXML(
+          latest.nowcasting[0].link,
+        );
         return c.json({
           success: true,
           source: "www.bmkg.go.id",
@@ -75,7 +199,8 @@ publicRoute.get("/nowcasting", async (c) => {
           data,
         });
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
         return c.json(
           {
             success: false,
@@ -158,7 +283,8 @@ publicRoute.get("/location", async (c) => {
       return c.json(
         {
           success: false,
-          error: "Missing required parameters. Provide either 'code' or both 'lat' and 'lon'.",
+          error:
+            "Missing required parameters. Provide either 'code' or both 'lat' and 'lon'.",
           examples: {
             byCode: "/public/location?code=33.01.22.1003",
             byCoordinates: "/public/location?lat=-7.656747&lon=109.115523",

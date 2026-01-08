@@ -9,6 +9,19 @@ import {
 import { awsToGeoJSON } from "weather-client";
 import regionalCodes from "../regional-codes";
 
+// Helper function with timeout
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) =>
+      setTimeout(
+        () => reject(new Error(`Request timed out after ${timeoutMs}ms`)),
+        timeoutMs,
+      ),
+    ),
+  ]);
+}
+
 // Load credentials from environment variables
 const username = process.env.BMKG_USERNAME;
 const password = process.env.BMKG_PASSWORD;
@@ -23,6 +36,30 @@ if (!username || !password) {
 // Load regional codes data from generated file
 const regionalCodesData = regionalCodes;
 
+// Helper function to get parent names from ADM4 code
+function getParentNames(adm4Code: string) {
+  const parts = adm4Code.split(".");
+  const provinceCode = parts[0];
+  const regencyCode = parts.slice(0, 2).join(".");
+  const districtCode = parts.slice(0, 3).join(".");
+
+  const province = regionalCodesData.find(
+    (code) => code.code === provinceCode && code.level === 1,
+  );
+  const regency = regionalCodesData.find(
+    (code) => code.code === regencyCode && code.level === 2,
+  );
+  const district = regionalCodesData.find(
+    (code) => code.code === districtCode && code.level === 3,
+  );
+
+  return {
+    province_name: province?.name || "Unknown Province",
+    regency_name: regency?.name || "Unknown Regency",
+    district_name: district?.name || "Unknown District",
+  };
+}
+
 const mcp = new Hono();
 
 // Helper function to format weather results
@@ -35,12 +72,25 @@ function formatWeatherResult(data: any, format: string) {
 
 // Manual MCP server implementation for serverless environment
 mcp.post("/", async (c) => {
+  const startTime = Date.now();
+  const clientIP =
+    c.req.header("CF-Connecting-IP") ||
+    c.req.header("X-Forwarded-For") ||
+    "unknown";
+
+  console.log(
+    `[MCP] Request from ${clientIP} - Method: ${JSON.stringify(await c.req.json().catch(() => ({ method: "invalid" })))}`,
+  );
+
   try {
     const request = await c.req.json();
     const { jsonrpc, method, params, id } = request;
 
+    console.log(`[MCP] Processing ${method} request (ID: ${id})`);
+
     // Validate JSON-RPC format
     if (jsonrpc !== "2.0" || !method) {
+      console.warn(`[MCP] Invalid JSON-RPC request format`);
       return c.json({
         jsonrpc: "2.0",
         error: { code: -32600, message: "Invalid Request" },
@@ -76,14 +126,14 @@ mcp.post("/", async (c) => {
               {
                 name: "get_weather_by_province",
                 description:
-                  "Get weather station data for a specific province. Please default type to null for all types",
+                  "Mendapatkan data stasiun cuaca terkini untuk semua stasiun otomatis/alat ukur cuaca dalam satu provinsi Indonesia. Mengembalikan observasi cuaca real-time termasuk suhu, kelembaban, kecepatan/arah angin, curah hujan, dan tekanan atmosfer dari berbagai jenis stasiun otomatis BMKG (AWS, ARG, ASRS, soil moisture, climatological micro, dll.). Gunakan kode provinsi seperti PR013 untuk Jawa Tengah. Set type ke null untuk mendapatkan semua jenis stasiun, atau filter berdasarkan jenis tertentu (aws, arg, soil, dll.).",
                 inputSchema: {
                   type: "object",
                   properties: {
                     province: {
                       type: "string",
                       description:
-                        "Province code (e.g., PR013 for Jawa Tengah)",
+                        "Kode provinsi: PR001=Nanggroe Aceh Darusalam, PR002=Sumatera Utara, PR003=Sumatera Barat, PR004=Sumatera Selatan, PR005=Riau, PR006=Jambi, PR007=Bengkulu, PR008=Lampung, PR009=Kepulauan Bangka Belitung, PR010=Kepulauan Riau, PR011=DKI Jakarta, PR012=Jawa Barat, PR013=Jawa Tengah, PR014=Banten, PR015=Jawa Timur, PR016=DI Yogyakarta, PR017=Bali, PR018=Nusa Tenggara Barat, PR019=Nusa Tenggara Timur, PR020=Kalimantan Barat, PR021=Kalimantan Tengah, PR022=Kalimantan Selatan, PR023=Kalimantan Timur, PR024=Kalimantan Utara, PR025=Sulawesi Utara, PR026=Sulawesi Tengah, PR027=Sulawesi Selatan, PR028=Sulawesi Tenggara, PR029=Gorontalo, PR030=Sulawesi Barat, PR031=Maluku, PR032=Maluku Utara, PR033=Papua, PR034=Papua Barat",
                     },
                     type: {
                       type: "string",
@@ -95,12 +145,12 @@ mcp.post("/", async (c) => {
                         "soil",
                         "iklimmikro",
                       ],
-                      description: "Station type filter",
+                      description: "Filter jenis stasiun",
                     },
                     format: {
                       type: "string",
                       enum: ["json", "geojson"],
-                      description: "Output format",
+                      description: "Format output",
                       default: "json",
                     },
                   },
@@ -110,13 +160,13 @@ mcp.post("/", async (c) => {
               {
                 name: "get_weather_by_city",
                 description:
-                  "Get weather automatic station data for a specific city. Please default type to null for all types",
+                  "Mendapatkan data stasiun cuaca terkini untuk semua stasiun otomatis/alat ukur cuaca dalam satu kota Indonesia. Mengembalikan observasi cuaca real-time termasuk suhu, kelembaban, kecepatan/arah angin, curah hujan, dan tekanan atmosfer dari berbagai jenis stasiun otomatis BMKG (AWS, ARG, ASRS, soil moisture, climatological micro, dll.). Gunakan nama kota seperti cilacap, semarang, dll. Set type ke null untuk mendapatkan semua jenis stasiun, atau filter berdasarkan jenis tertentu (aws, arg, soil, dll.).",
                 inputSchema: {
                   type: "object",
                   properties: {
                     city: {
                       type: "string",
-                      description: "City name (e.g., cilacap, semarang)",
+                      description: "Nama kota (contoh: cilacap, semarang)",
                     },
                     type: {
                       type: "string",
@@ -128,12 +178,12 @@ mcp.post("/", async (c) => {
                         "soil",
                         "iklimmikro",
                       ],
-                      description: "Station type filter",
+                      description: "Filter jenis stasiun",
                     },
                     format: {
                       type: "string",
                       enum: ["json", "geojson"],
-                      description: "Output format",
+                      description: "Format output",
                       default: "json",
                     },
                   },
@@ -143,7 +193,7 @@ mcp.post("/", async (c) => {
               {
                 name: "get_weather_by_stations",
                 description:
-                  "Get weather data for specific automatic station IDs it can be multiple stations types please default to null for all types",
+                  "Mendapatkan data stasiun cuaca terkini untuk ID stasiun otomatis tertentu, bisa multiple stasiun dengan berbagai jenis. Mengembalikan observasi cuaca real-time termasuk suhu, kelembaban, kecepatan/arah angin, curah hujan, dan tekanan atmosfer dari berbagai jenis stasiun otomatis BMKG (AWS, ARG, ASRS, soil moisture, climatological micro, dll.). Gunakan ID stasiun seperti STA3024, STA2201, STM1002, STW1058, STA3022, STA2033, 150077, STG1042, AAWS0357, STA3020, STA0052, STA5092, STA0047, STA0056, STG1035, STA2173, 150302, STG1043, STA0049, STA0044, dll. Set type ke null untuk mendapatkan semua jenis stasiun, atau filter berdasarkan jenis tertentu (aws, arg, soil, dll.).",
                 inputSchema: {
                   type: "object",
                   properties: {
@@ -151,7 +201,7 @@ mcp.post("/", async (c) => {
                       type: "array",
                       items: { type: "string" },
                       description:
-                        "Array of station IDs (e.g., ['STA1101', 'STA1102'])",
+                        "Array ID stasiun (contoh: ['STA1101', 'STA1102'])",
                     },
                     type: {
                       type: "string",
@@ -163,13 +213,13 @@ mcp.post("/", async (c) => {
                         "soil",
                         "iklimmikro",
                       ],
-                      description: "Station type filter",
+                      description: "Filter jenis stasiun",
                       default: "aws",
                     },
                     format: {
                       type: "string",
                       enum: ["json", "geojson"],
-                      description: "Output format",
+                      description: "Format output",
                       default: "json",
                     },
                   },
@@ -179,7 +229,7 @@ mcp.post("/", async (c) => {
               {
                 name: "get_weather_by_radius",
                 description:
-                  "Get weather station data within a radius from coordinates. Please default type to null for all types",
+                  "Mendapatkan data stasiun cuaca terkini dalam radius tertentu dari koordinat geografis. Mengembalikan observasi cuaca real-time termasuk suhu, kelembaban, kecepatan/arah angin, curah hujan, dan tekanan atmosfer dari berbagai jenis stasiun otomatis BMKG (AWS, ARG, ASRS, soil moisture, climatological micro, dll.) yang berada dalam radius yang ditentukan. Gunakan koordinat latitude dan longitude sebagai pusat pencarian, dengan radius dalam kilometer (default 50km). Set type ke null untuk mendapatkan semua jenis stasiun, atau filter berdasarkan jenis tertentu (aws, arg, soil, dll.).",
                 inputSchema: {
                   type: "object",
                   properties: {
@@ -193,7 +243,7 @@ mcp.post("/", async (c) => {
                     },
                     radius: {
                       type: "number",
-                      description: "Radius in kilometers",
+                      description: "Radius dalam kilometer",
                       default: 50,
                     },
                     type: {
@@ -206,12 +256,12 @@ mcp.post("/", async (c) => {
                         "soil",
                         "iklimmikro",
                       ],
-                      description: "Station type filter",
+                      description: "Filter jenis stasiun",
                     },
                     format: {
                       type: "string",
                       enum: ["json", "geojson"],
-                      description: "Output format",
+                      description: "Format output",
                       default: "json",
                     },
                   },
@@ -219,100 +269,50 @@ mcp.post("/", async (c) => {
                 },
               },
               {
-                name: "get_nowcasting",
-                description: "Get nowcasting weather data",
-                inputSchema: {
-                  type: "object",
-                  properties: {
-                    code: {
-                      type: "string",
-                      description: "Station code (e.g., CJH)",
-                    },
-                    province: {
-                      type: "string",
-                      description: "Province name (e.g., jawa_tengah)",
-                    },
-                    format: {
-                      type: "string",
-                      enum: ["json", "xml"],
-                      description: "Output format",
-                      default: "json",
-                    },
-                  },
-                },
-              },
-              {
-                name: "get_public_nowcasting",
+                name: "get_public_weather_warnings",
                 description:
-                  "Get public nowcasting weather data from BMKG public APIs",
+                  "Mendapatkan data peringatan dini cuaca ekstrem (nowcasting) dari seluruh Indonesia melalui API publik BMKG. Tool ini menyediakan informasi peringatan dini untuk kondisi cuaca ekstrem khususnya hujan ekstrem di wilayah daratan seperti hujan lebat, hujan sangat lebat yang dapat menyebabkan banjir, tanah longsor, dan dampak hidrometeorologi lainnya. Jika parameter 'province' tidak diberikan, tool akan mengembalikan daftar semua provinsi yang sedang memiliki data peringatan dini cuaca aktif. Gunakan type 'databmkg' untuk mendapatkan data peringatan dini berdasarkan provinsi, dengan nama provinsi menggunakan underscore (_) sebagai pengganti spasi (contoh: 'jawa_tengah', 'sumatera_barat'). Data ini sangat penting untuk kesiapsiagaan menghadapi bencana hidrometeorologi di wilayah daratan.",
                 inputSchema: {
                   type: "object",
                   properties: {
                     type: {
                       type: "string",
-                      enum: ["signature", "xml", "databmkg"],
-                      description: "Data source type",
-                      default: "signature",
+                      enum: ["databmkg", "xml", "signature"],
+                      description:
+                        "Tipe sumber data - gunakan 'databmkg' untuk data peringatan dini cuaca ekstrem",
+                      default: "databmkg",
                     },
                     code: {
                       type: "string",
-                      description: "Station code for signature API (e.g., CJH)",
+                      description:
+                        "Kode provinsi untuk API signature (contoh: CJH, CJT)",
                     },
                     province: {
                       type: "string",
                       description:
-                        "Province name for XML API (e.g., jawa_tengah)",
-                    },
-                  },
-                },
-              },
-              {
-                name: "get_public_weather_forecast",
-                description:
-                  "Get public weather forecast data in GeoJSON format",
-                inputSchema: {
-                  type: "object",
-                  properties: {
-                    province: {
-                      type: "string",
-                      description:
-                        "Filter by province name (e.g., jawa_tengah)",
-                    },
-                    kabupaten: {
-                      type: "string",
-                      description:
-                        "Filter by kabupaten/regency name (e.g., banyumas)",
-                    },
-                    kecamatan: {
-                      type: "string",
-                      description: "Filter by kecamatan/district name",
-                    },
-                    format: {
-                      type: "string",
-                      enum: ["geojson", "json"],
-                      description: "Output format",
-                      default: "geojson",
+                        "Nama provinsi untuk API XML/databmkg dengan underscore (_) sebagai pengganti spasi (contoh: jawa_tengah, sumatera_barat, dki_jakarta). Jika tidak diberikan, akan mengembalikan daftar provinsi yang aktif memiliki data peringatan dini.",
                     },
                   },
                 },
               },
               {
                 name: "get_weather_by_location",
-                description: "Get weather data by location code or coordinates",
+                description:
+                  "Mendapatkan data informasi cuaca saat ini DAN prakiraan cuaca ke depan dalam satu permintaan berdasarkan kode lokasi ADM4 atau koordinat geografis. Tool ini memberikan data cuaca model untuk kondisi saat ini (bukan observasi real-time) serta prakiraan cuaca untuk beberapa hari ke depan. Perbedaannya dengan tool get_forecast_* adalah tool ini mencakup informasi cuaca 'saat ini' dari model cuaca, sedangkan get_forecast_* hanya memberikan prakiraan murni ke depan tanpa data saat ini.",
                 inputSchema: {
                   type: "object",
                   properties: {
                     code: {
                       type: "string",
-                      description: "ADM4 location code (e.g., 33.01.22.1003)",
+                      description: "Kode lokasi ADM4 (contoh: 33.01.22.1003)",
                     },
                     lat: {
                       type: "number",
-                      description: "Latitude coordinate",
+                      description: "Koordinat latitude",
                     },
                     lon: {
                       type: "number",
-                      description: "Longitude coordinate",
+                      description: "Koordinat longitude",
                     },
                   },
                   oneOf: [{ required: ["code"] }, { required: ["lat", "lon"] }],
@@ -321,28 +321,28 @@ mcp.post("/", async (c) => {
               {
                 name: "get_regional_codes",
                 description:
-                  "Get Indonesian regional codes (Kode Wilayah) for weather forecasting",
+                  "Mencari dan mendapatkan kode wilayah administrasi Indonesia (ADM1-4) yang digunakan untuk prakiraan cuaca BMKG. Tool ini menyediakan database lengkap kode wilayah dari tingkat provinsi (ADM1) hingga desa/kelurahan (ADM4) dengan format kode seperti '33.01.22.1003'. Kode-kode ini diperlukan sebagai parameter input untuk tools prakiraan cuaca seperti get_forecast_by_adm1, get_forecast_by_adm2, get_forecast_by_adm3, dan get_forecast_by_adm4. Gunakan parameter query untuk pencarian berdasarkan nama wilayah, level untuk filter tingkat administrasi, dan parent_code untuk mencari sub-wilayah dari kode induk tertentu.",
                 inputSchema: {
                   type: "object",
                   properties: {
                     query: {
                       type: "string",
-                      description: "Search query for region name (optional)",
+                      description: "Query pencarian nama wilayah (opsional)",
                     },
                     level: {
                       type: "number",
                       enum: [1, 2, 3, 4],
                       description:
-                        "Administrative level: 1=Province, 2=Regency/City, 3=District, 4=Village",
+                        "Tingkat administrasi: 1=Provinsi, 2=Kabupaten/Kota, 3=Kecamatan, 4=Desa",
                     },
                     parent_code: {
                       type: "string",
                       description:
-                        "Parent region code to filter children (e.g., '11' for all Aceh regions)",
+                        "Kode wilayah induk untuk memfilter anak (contoh: '11' untuk semua wilayah Aceh)",
                     },
                     limit: {
                       type: "number",
-                      description: "Maximum number of results to return",
+                      description: "Maksimum jumlah hasil yang dikembalikan",
                       default: 100,
                     },
                   },
@@ -351,25 +351,25 @@ mcp.post("/", async (c) => {
               {
                 name: "get_forecast_by_location",
                 description:
-                  "PRIMARY TOOL for weather forecast queries. Automatically detects administrative level (provinsi/province, kabupaten/regency, kota/city, kecamatan/district, desa/village) " +
-                  "by checking regional codes and selects the most appropriate forecast data. " +
-                  "Use this tool for ALL general weather queries like 'cuaca di Jakarta', 'weather in Banyumas', 'forecast for Purwokerto', 'cuaca kota Semarang', etc. " +
-                  "Supports all administrative levels and automatically prioritizes the most specific location found. " +
-                  "For ambiguous names (e.g., 'kota' could mean ADM2 or ADM3), it intelligently selects based on regional code data. " +
-                  "When explaining weather conditions, use the standard BMKG weather codes: " +
+                  "TOOL UTAMA untuk query prakiraan cuaca. Secara otomatis mendeteksi tingkat administrasi (provinsi, kabupaten/regency, kota/city, kecamatan/district, desa/village) " +
+                  "dengan memeriksa kode wilayah dan memilih data prakiraan yang paling sesuai. " +
+                  "Gunakan tool ini untuk SEMUA query cuaca umum seperti 'cuaca di Jakarta', 'weather in Banyumas', 'forecast for Purwokerto', 'cuaca kota Semarang', dll. " +
+                  "Mendukung semua tingkat administrasi dan secara otomatis memprioritaskan lokasi yang paling spesifik. " +
+                  "Untuk nama yang ambigu (contoh: 'kota' bisa berarti ADM2 atau ADM3), secara cerdas memilih berdasarkan data kode wilayah. " +
+                  "Saat menjelaskan kondisi cuaca, gunakan kode cuaca BMKG standar: " +
                   "0=Cerah, 1=Cerah Berawan, 2=Cerah Berawan, 3=Berawan, 4=Berawan Tebal, " +
                   "5=Udara Kabur, 10=Asap, 45=Kabut, 60=Hujan Ringan, 61=Hujan Sedang, " +
                   "63=Hujan Lebat, 80=Hujan Lokal, 95=Hujan Petir, 97=Hujan Petir. " +
-                  "For wind directions, use CARD codes: N=Utara, NE=Timur Laut, E=Timur, " +
+                  "Untuk arah angin, gunakan kode CARD: N=Utara, NE=Timur Laut, E=Timur, " +
                   "SE=Tenggara, S=Selatan, SW=Barat Daya, W=Barat, NW=Barat Laut, VARIABLE=Berubah-ubah. " +
-                  "Provide clear, detailed explanations using these standard codes for better meteorological accuracy.",
+                  "Berikan penjelasan yang jelas dan detail menggunakan kode standar ini untuk akurasi meteorologi yang lebih baik.",
                 inputSchema: {
                   type: "object",
                   properties: {
                     location: {
                       type: "string",
                       description:
-                        "Location name (any administrative level: provinsi, kabupaten/kota, kecamatan, desa/kelurahan)",
+                        "Nama lokasi (tingkat administrasi apa saja: provinsi, kabupaten/kota, kecamatan, desa/kelurahan)",
                     },
                   },
                   required: ["location"],
@@ -378,23 +378,23 @@ mcp.post("/", async (c) => {
               {
                 name: "get_forecast_by_adm4",
                 description:
-                  "Get weather forecast for a specific village/sub-district (desa/kelurahan) by ADM4 code or village name. " +
-                  "Use this tool when user asks for weather in a specific village, sub-district, or provides a 13-digit ADM4 code. " +
-                  "Examples: 'cuaca di desa bancarkembar', 'weather in kelurahan sudirman', or ADM4 code '33.02.27.1002'. " +
-                  "When explaining weather conditions, use the standard BMKG weather codes: " +
+                  "Mendapatkan prakiraan cuaca untuk desa/kelurahan tertentu berdasarkan kode ADM4 atau nama desa. " +
+                  "Gunakan tool ini ketika pengguna bertanya cuaca di desa tertentu, kelurahan, atau memberikan kode ADM4 13 digit. " +
+                  "Contoh: 'cuaca di desa bancarkembar', 'weather in kelurahan sudirman', atau kode ADM4 '33.02.27.1002'. " +
+                  "Saat menjelaskan kondisi cuaca, gunakan kode cuaca BMKG standar: " +
                   "0=Cerah, 1=Cerah Berawan, 2=Cerah Berawan, 3=Berawan, 4=Berawan Tebal, " +
                   "5=Udara Kabur, 10=Asap, 45=Kabut, 60=Hujan Ringan, 61=Hujan Sedang, " +
                   "63=Hujan Lebat, 80=Hujan Lokal, 95=Hujan Petir, 97=Hujan Petir. " +
-                  "For wind directions, use CARD codes: N=Utara, NE=Timur Laut, E=Timur, " +
+                  "Untuk arah angin, gunakan kode CARD: N=Utara, NE=Timur Laut, E=Timur, " +
                   "SE=Tenggara, S=Selatan, SW=Barat Daya, W=Barat, NW=Barat Laut, VARIABLE=Berubah-ubah. " +
-                  "Provide clear, detailed explanations using these standard codes for better meteorological accuracy.",
+                  "Berikan penjelasan yang jelas dan detail menggunakan kode standar ini untuk akurasi meteorologi yang lebih baik.",
                 inputSchema: {
                   type: "object",
                   properties: {
                     adm4: {
                       type: "string",
                       description:
-                        "ADM4 code or village name (desa/kelurahan, e.g., '33.02.27.1002' or 'bancarkembar')",
+                        "Kode ADM4 atau nama desa (desa/kelurahan, contoh: '33.02.27.1002' atau 'bancarkembar')",
                     },
                   },
                   required: ["adm4"],
@@ -403,24 +403,24 @@ mcp.post("/", async (c) => {
               {
                 name: "get_forecast_by_adm3",
                 description:
-                  "Get weather forecast for a district (kecamatan) by ADM3 code or district name. " +
-                  "Use this tool when user asks for weather in a district/kecamatan or provides an 8-digit ADM3 code. " +
-                  "Examples: 'cuaca di kecamatan purwokerto utara', 'weather in district banjarsari', or ADM3 code '33.02.27'. " +
-                  "This tool finds ADM4 codes within the specified district and returns representative forecast data. " +
-                  "When explaining weather conditions, use the standard BMKG weather codes: " +
+                  "Mendapatkan prakiraan cuaca untuk kecamatan berdasarkan kode ADM3 atau nama kecamatan. " +
+                  "Gunakan tool ini ketika pengguna bertanya cuaca di kecamatan atau memberikan kode ADM3 8 digit. " +
+                  "Contoh: 'cuaca di kecamatan purwokerto utara', 'weather in district banjarsari', atau kode ADM3 '33.02.27'. " +
+                  "Tool ini mencari kode ADM4 dalam kecamatan yang ditentukan dan mengembalikan data prakiraan representatif. " +
+                  "Saat menjelaskan kondisi cuaca, gunakan kode cuaca BMKG standar: " +
                   "0=Cerah, 1=Cerah Berawan, 2=Cerah Berawan, 3=Berawan, 4=Berawan Tebal, " +
                   "5=Udara Kabur, 10=Asap, 45=Kabut, 60=Hujan Ringan, 61=Hujan Sedang, " +
                   "63=Hujan Lebat, 80=Hujan Lokal, 95=Hujan Petir, 97=Hujan Petir. " +
-                  "For wind directions, use CARD codes: N=Utara, NE=Timur Laut, E=Timur, " +
+                  "Untuk arah angin, gunakan kode CARD: N=Utara, NE=Timur Laut, E=Timur, " +
                   "SE=Tenggara, S=Selatan, SW=Barat Daya, W=Barat, NW=Barat Laut, VARIABLE=Berubah-ubah. " +
-                  "Provide clear, detailed explanations using these standard codes for better meteorological accuracy.",
+                  "Berikan penjelasan yang jelas dan detail menggunakan kode standar ini untuk akurasi meteorologi yang lebih baik.",
                 inputSchema: {
                   type: "object",
                   properties: {
                     adm3: {
                       type: "string",
                       description:
-                        "ADM3 code or district name (kecamatan, e.g., '33.01.01' or 'purwokerto utara')",
+                        "Kode ADM3 atau nama kecamatan (kecamatan, contoh: '33.01.01' atau 'purwokerto utara')",
                     },
                   },
                   required: ["adm3"],
@@ -429,24 +429,24 @@ mcp.post("/", async (c) => {
               {
                 name: "get_forecast_by_adm2",
                 description:
-                  "Get weather forecast for a regency/city (kabupaten/kota) by ADM2 code or regency/city name. " +
-                  "Use this tool when user asks for weather in a regency/kabupaten or city/kota, or provides a 5-digit ADM2 code. " +
-                  "Examples: 'cuaca di kabupaten banyumas', 'weather in kota semarang', or ADM2 code '33.02'. " +
-                  "This tool finds ADM4 codes within the specified regency/city and returns representative forecast data. " +
-                  "When explaining weather conditions, use the standard BMKG weather codes: " +
+                  "Mendapatkan prakiraan cuaca untuk kabupaten/kota berdasarkan kode ADM2 atau nama kabupaten/kota. " +
+                  "Gunakan tool ini ketika pengguna bertanya cuaca di kabupaten/kota atau memberikan kode ADM2 5 digit. " +
+                  "Contoh: 'cuaca di kabupaten banyumas', 'weather in kota semarang', atau kode ADM2 '33.02'. " +
+                  "Tool ini mencari kode ADM4 dalam kabupaten/kota yang ditentukan dan mengembalikan data prakiraan representatif. " +
+                  "Saat menjelaskan kondisi cuaca, gunakan kode cuaca BMKG standar: " +
                   "0=Cerah, 1=Cerah Berawan, 2=Cerah Berawan, 3=Berawan, 4=Berawan Tebal, " +
                   "5=Udara Kabur, 10=Asap, 45=Kabut, 60=Hujan Ringan, 61=Hujan Sedang, " +
                   "63=Hujan Lebat, 80=Hujan Lokal, 95=Hujan Petir, 97=Hujan Petir. " +
-                  "For wind directions, use CARD codes: N=Utara, NE=Timur Laut, E=Timur, " +
+                  "Untuk arah angin, gunakan kode CARD: N=Utara, NE=Timur Laut, E=Timur, " +
                   "SE=Tenggara, S=Selatan, SW=Barat Daya, W=Barat, NW=Barat Laut, VARIABLE=Berubah-ubah. " +
-                  "Provide clear, detailed explanations using these standard codes for better meteorological accuracy.",
+                  "Berikan penjelasan yang jelas dan detail menggunakan kode standar ini untuk akurasi meteorologi yang lebih baik.",
                 inputSchema: {
                   type: "object",
                   properties: {
                     adm2: {
                       type: "string",
                       description:
-                        "ADM2 code or regency/city name (kabupaten/kota, e.g., '33.01' or 'banyumas')",
+                        "Kode ADM2 atau nama kabupaten/kota (kabupaten/kota, contoh: '33.01' atau 'banyumas')",
                     },
                   },
                   required: ["adm2"],
@@ -455,24 +455,24 @@ mcp.post("/", async (c) => {
               {
                 name: "get_forecast_by_adm1",
                 description:
-                  "Get weather forecast for a province (provinsi) by ADM1 code or province name. " +
-                  "Use this tool when user asks for weather in a province/provinsi or provides a 2-digit ADM1 code. " +
-                  "Examples: 'cuaca di jawa tengah', 'weather in provinsi jawa barat', or ADM1 code '33'. " +
-                  "This tool finds ADM4 codes within the specified province and returns representative forecast data. " +
-                  "When explaining weather conditions, use the standard BMKG weather codes: " +
+                  "Mendapatkan prakiraan cuaca untuk provinsi berdasarkan kode ADM1 atau nama provinsi. " +
+                  "Gunakan tool ini ketika pengguna bertanya cuaca di provinsi atau memberikan kode ADM1 2 digit. " +
+                  "Contoh: 'cuaca di jawa tengah', 'weather in provinsi jawa barat', atau kode ADM1 '33'. " +
+                  "Tool ini mencari kode ADM4 dalam provinsi yang ditentukan dan mengembalikan data prakiraan representatif. " +
+                  "Saat menjelaskan kondisi cuaca, gunakan kode cuaca BMKG standar: " +
                   "0=Cerah, 1=Cerah Berawan, 2=Cerah Berawan, 3=Berawan, 4=Berawan Tebal, " +
                   "5=Udara Kabur, 10=Asap, 45=Kabut, 60=Hujan Ringan, 61=Hujan Sedang, " +
                   "63=Hujan Lebat, 80=Hujan Lokal, 95=Hujan Petir, 97=Hujan Petir. " +
-                  "For wind directions, use CARD codes: N=Utara, NE=Timur Laut, E=Timur, " +
+                  "Untuk arah angin, gunakan kode CARD: N=Utara, NE=Timur Laut, E=Timur, " +
                   "SE=Tenggara, S=Selatan, SW=Barat Daya, W=Barat, NW=Barat Laut, VARIABLE=Berubah-ubah. " +
-                  "Provide clear, detailed explanations using these standard codes for better meteorological accuracy.",
+                  "Berikan penjelasan yang jelas dan detail menggunakan kode standar ini untuk akurasi meteorologi yang lebih baik.",
                 inputSchema: {
                   type: "object",
                   properties: {
                     adm1: {
                       type: "string",
                       description:
-                        "ADM1 code or province name (provinsi, e.g., '33' or 'jawa tengah')",
+                        "Kode ADM1 atau nama provinsi (provinsi, contoh: '33' atau 'jawa tengah')",
                     },
                   },
                   required: ["adm1"],
@@ -486,66 +486,79 @@ mcp.post("/", async (c) => {
       case "tools/call": {
         const { name, arguments: args } = params;
 
+        console.log(
+          `[MCP] Tool call: ${name} with args: ${JSON.stringify(args)}`,
+        );
+
         try {
           let data;
           let result;
 
           switch (name) {
             case "get_weather_by_province":
-              data = await fetcher.fetchDataByProvince(
-                [args.province],
-                args.type ? [args.type] : undefined,
+              console.log(
+                `[MCP] Fetching weather data for province: ${args.province}`,
+              );
+              data = await withTimeout(
+                fetcher.fetchDataByProvince(
+                  [args.province],
+                  args.type ? [args.type] : undefined,
+                ),
+                300000,
               );
               result = formatWeatherResult(data, args.format || "json");
+              console.log(
+                `[MCP] Successfully fetched ${Array.isArray(result) ? result.length : 1} weather stations for province ${args.province}`,
+              );
               break;
 
             case "get_weather_by_city":
-              data = await fetcher.fetchDataByCity(
-                args.city,
-                args.type || null,
-                "partial",
+              data = await withTimeout(
+                fetcher.fetchDataByCity(
+                  args.city,
+                  args.type || null,
+                  "partial",
+                ),
+                300000,
               );
               result = formatWeatherResult(data, args.format || "json");
               break;
 
             case "get_weather_by_stations":
-              data = await fetcher.fetchMultipleStations(
-                args.stations,
-                args.type || null,
+              data = await withTimeout(
+                fetcher.fetchMultipleStations(args.stations, args.type || null),
+                300000,
               );
               result = formatWeatherResult(data, args.format || "json");
               break;
 
             case "get_weather_by_radius":
-              data = await fetcher.fetchDataByRadius(
-                args.lat,
-                args.lon,
-                args.radius || 50,
-                args.type || null,
+              data = await withTimeout(
+                fetcher.fetchDataByRadius(
+                  args.lat,
+                  args.lon,
+                  args.radius || 50,
+                  args.type || null,
+                ),
+                300000,
               );
               result = formatWeatherResult(data, args.format || "json");
               break;
 
-            case "get_nowcasting":
-              if (args.code) {
-                data = await fetcher.fetchStationData(args.code);
-              } else if (args.province) {
-                data = await fetcher.fetchDataByProvince([args.province]);
-              } else {
-                throw new Error(
-                  "Either 'code' or 'province' parameter is required",
-                );
-              }
-              result = formatWeatherResult(data, args.format || "json");
-              break;
-
-            case "get_public_nowcasting": {
+            case "get_public_weather_warnings": {
               const publicWeather = new PublicWeather();
-              const type = args.type || "signature";
+              const type = args.type || "databmkg";
+
+              console.log(
+                `[MCP] Fetching public weather warnings with type: ${type}`,
+              );
 
               if (type === "signature") {
                 const code = args.code || "CJH";
-                data = await publicWeather.getNowcasting(code);
+                data = await withTimeout(
+                  publicWeather.getNowcasting(code),
+                  300000,
+                );
                 result = {
                   success: true,
                   source: "signature.bmkg.go.id",
@@ -553,79 +566,153 @@ mcp.post("/", async (c) => {
                   data,
                 };
               } else if (type === "xml" || type === "databmkg") {
+                // Jika tidak ada province, kembalikan list provinsi aktif
                 if (!args.province) {
-                  throw new Error(
-                    "Province parameter is required for XML/databmkg type",
+                  console.log(
+                    `[MCP] Fetching list of active provinces with nowcasting data`,
                   );
-                }
-                const latest = await publicWeather.getNowcastingXMLLatest(
-                  args.province,
-                );
-                if (!latest?.nowcasting?.[0]?.link) {
-                  throw new Error(
-                    `No nowcasting data found for province: ${args.province}`,
+                  const allData = await withTimeout(
+                    publicWeather.getNowcastingXMLLatest(),
+                    300000,
                   );
+
+                  if (!allData?.rss?.channel?.item) {
+                    throw new Error(
+                      "Tidak dapat mengambil data nowcasting aktif",
+                    );
+                  }
+
+                  const items = Array.isArray(allData.rss.channel.item)
+                    ? allData.rss.channel.item
+                    : [allData.rss.channel.item];
+
+                  // Extract unique provinces from titles
+                  const provinces = items
+                    .map((item: any) => {
+                      if (!item.title) return null;
+                      // Extract province name from title (format varies, but usually ends with province name)
+                      const title = item.title;
+                      // Look for province names in the title, typically after "di" or at the end
+                      const provincePatterns = [
+                        /di\s+([^,]+),?/i, // "di PROVINSI,"
+                        /di\s+([^.]+)\.?$/i, // "di PROVINSI."
+                        /\s+([^,]+),?\s*$/i, // Last part before comma or end
+                      ];
+
+                      for (const pattern of provincePatterns) {
+                        const match = title.match(pattern);
+                        if (match && match[1]) {
+                          return match[1].trim();
+                        }
+                      }
+
+                      // Fallback: try to extract from known province keywords
+                      const knownProvinces = [
+                        "Aceh",
+                        "Sumatera Utara",
+                        "Sumatera Barat",
+                        "Riau",
+                        "Kepulauan Riau",
+                        "Jambi",
+                        "Sumatera Selatan",
+                        "Bangka Belitung",
+                        "Bengkulu",
+                        "Lampung",
+                        "DKI Jakarta",
+                        "Jawa Barat",
+                        "Jawa Tengah",
+                        "DI Yogyakarta",
+                        "Jawa Timur",
+                        "Banten",
+                        "Bali",
+                        "Nusa Tenggara Barat",
+                        "Nusa Tenggara Timur",
+                        "Kalimantan Barat",
+                        "Kalimantan Tengah",
+                        "Kalimantan Selatan",
+                        "Kalimantan Timur",
+                        "Kalimantan Utara",
+                        "Sulawesi Utara",
+                        "Gorontalo",
+                        "Sulawesi Tengah",
+                        "Sulawesi Barat",
+                        "Sulawesi Selatan",
+                        "Sulawesi Tenggara",
+                        "Maluku",
+                        "Maluku Utara",
+                        "Papua",
+                        "Papua Barat",
+                        "Papua Selatan",
+                        "Papua Tengah",
+                        "Papua Pegunungan",
+                      ];
+
+                      for (const province of knownProvinces) {
+                        if (
+                          title.toLowerCase().includes(province.toLowerCase())
+                        ) {
+                          return province;
+                        }
+                      }
+
+                      return null;
+                    })
+                    .filter((province: string | null) => province !== null)
+                    .filter(
+                      (province: string, index: number, arr: string[]) =>
+                        arr.indexOf(province) === index, // Remove duplicates
+                    )
+                    .sort(); // Sort alphabetically
+
+                  result = {
+                    success: true,
+                    source: "www.bmkg.go.id",
+                    type: "active_provinces_list",
+                    count: provinces.length,
+                    provinces,
+                    last_updated: allData.rss.channel.lastBuildDate || null,
+                  };
+                } else {
+                  // Jika ada province, ambil data untuk provinsi tersebut
+                  // Replace underscore with space to match API expectation (same as public endpoint)
+                  const province = args.province.replace(/_/g, " ");
+                  const latest = await withTimeout(
+                    publicWeather.getNowcastingXMLLatest(province),
+                    300000,
+                  );
+                  if (!latest?.nowcasting?.[0]?.link) {
+                    throw new Error(
+                      `No nowcasting data found for province: ${province}`,
+                    );
+                  }
+                  data = await withTimeout(
+                    publicWeather.getNowcastingXML(latest.nowcasting[0].link),
+                    300000,
+                  );
+
+                  // Extract infographics links if available
+                  let infographics = null;
+                  if (data?.alert?.info?.web) {
+                    const baseUrl = data.alert.info.web;
+                    infographics = {
+                      image: baseUrl,
+                      text: baseUrl.replace(
+                        "infografis.jpg",
+                        "infografis_text.jpg",
+                      ),
+                    };
+                  }
+
+                  result = {
+                    success: true,
+                    source: "www.bmkg.go.id",
+                    province,
+                    data,
+                    infographics,
+                  };
                 }
-                data = await publicWeather.getNowcastingXML(
-                  latest.nowcasting[0].link,
-                );
-                result = {
-                  success: true,
-                  source: "www.bmkg.go.id",
-                  province: args.province,
-                  data,
-                };
               } else {
                 throw new Error(`Unsupported type parameter: ${type}`);
-              }
-              break;
-            }
-
-            case "get_public_weather_forecast": {
-              const publicWeather = new PublicWeather();
-              const rawData = (await publicWeather.getPwxDarat()) as any[];
-
-              // Always convert to GeoJSON first for filtering
-              const geojson = publicToGeoJSON(rawData);
-
-              // Apply filters
-              const filteredGeoJSON = filterPublicGeoJSON(geojson, {
-                province: args.province
-                  ? args.province.replace(/_/g, " ")
-                  : undefined,
-                kabupaten: args.kabupaten
-                  ? args.kabupaten.replace(/_/g, " ")
-                  : undefined,
-                kecamatan: args.kecamatan
-                  ? args.kecamatan.replace(/_/g, " ")
-                  : undefined,
-              });
-
-              if (args.format === "geojson") {
-                result = {
-                  ...filteredGeoJSON,
-                  metadata: {
-                    success: true,
-                    count: filteredGeoJSON.features.length,
-                    filters: {
-                      province: args.province || null,
-                      kabupaten: args.kabupaten || null,
-                      kecamatan: args.kecamatan || null,
-                    },
-                    generated: new Date().toISOString(),
-                  },
-                };
-              } else {
-                result = {
-                  success: true,
-                  count: filteredGeoJSON.features.length,
-                  filters: {
-                    province: args.province || null,
-                    kabupaten: args.kabupaten || null,
-                    kecamatan: args.kecamatan || null,
-                  },
-                  data: filteredGeoJSON.features,
-                };
               }
               break;
             }
@@ -635,7 +722,10 @@ mcp.post("/", async (c) => {
 
               if (args.code) {
                 // Fetch by ADM4 code
-                data = await publicWeather.getLocationWeatherByCode(args.code);
+                data = await withTimeout(
+                  publicWeather.getLocationWeatherByCode(args.code),
+                  300000,
+                );
                 result = {
                   success: true,
                   source: "signature.bmkg.go.id",
@@ -645,9 +735,9 @@ mcp.post("/", async (c) => {
                 };
               } else if (args.lat !== undefined && args.lon !== undefined) {
                 // Fetch by coordinates
-                data = await publicWeather.getLocationWeather(
-                  args.lat,
-                  args.lon,
+                data = await withTimeout(
+                  publicWeather.getLocationWeather(args.lat, args.lon),
+                  300000,
                 );
                 result = {
                   success: true,
@@ -807,8 +897,9 @@ mcp.post("/", async (c) => {
 
               if (selectedLocation.level === 4) {
                 // ADM4 - direct forecast
-                forecastData = await publicWeather.getForecastByAdm4(
-                  selectedLocation.code,
+                forecastData = await withTimeout(
+                  publicWeather.getForecastByAdm4(selectedLocation.code),
+                  300000,
                 );
                 resultType = "forecast_by_adm4";
                 selectedCode = selectedLocation.code;
@@ -828,8 +919,9 @@ mcp.post("/", async (c) => {
 
                 // Use the first ADM4 code found
                 const selectedAdm4 = adm4Codes[0];
-                forecastData = await publicWeather.getForecastByAdm4(
-                  selectedAdm4.code,
+                forecastData = await withTimeout(
+                  publicWeather.getForecastByAdm4(selectedAdm4.code),
+                  300000,
                 );
                 resultType = `forecast_by_adm${selectedLocation.level}`;
                 selectedCode = selectedAdm4.code;
@@ -876,8 +968,10 @@ mcp.post("/", async (c) => {
               }
 
               const publicWeather = new PublicWeather();
-              const forecastData =
-                await publicWeather.getForecastByAdm4(adm4Code);
+              const forecastData = await withTimeout(
+                publicWeather.getForecastByAdm4(adm4Code),
+                300000,
+              );
               result = {
                 success: true,
                 source: "api.bmkg.go.id",
@@ -951,8 +1045,9 @@ mcp.post("/", async (c) => {
               // Use the first ADM4 code found
               const selectedAdm4 = adm4Codes[0];
               const publicWeather = new PublicWeather();
-              const forecastData = await publicWeather.getForecastByAdm4(
-                selectedAdm4.code,
+              const forecastData = await withTimeout(
+                publicWeather.getForecastByAdm4(selectedAdm4.code),
+                300000,
               );
 
               result = {
@@ -1015,9 +1110,12 @@ mcp.post("/", async (c) => {
               // Use the first ADM4 code found
               const selectedAdm4 = adm4Codes[0];
               const publicWeather = new PublicWeather();
-              const forecastData = await publicWeather.getForecastByAdm4(
-                selectedAdm4.code,
+              const forecastData = await withTimeout(
+                publicWeather.getForecastByAdm4(selectedAdm4.code),
+                300000,
               );
+
+              const parentNames = getParentNames(selectedAdm4.code);
 
               result = {
                 success: true,
@@ -1025,7 +1123,7 @@ mcp.post("/", async (c) => {
                 type: "forecast_by_adm2",
                 adm2: args.adm2,
                 selected_adm4: selectedAdm4.code,
-                regency_name: selectedAdm4.parent_name || "Unknown Regency",
+                regency_name: parentNames.regency_name,
                 data: forecastData,
                 metadata: {
                   generated: new Date().toISOString(),
@@ -1070,9 +1168,12 @@ mcp.post("/", async (c) => {
               // Use the first ADM4 code found
               const selectedAdm4 = adm4Codes[0];
               const publicWeather = new PublicWeather();
-              const forecastData = await publicWeather.getForecastByAdm4(
-                selectedAdm4.code,
+              const forecastData = await withTimeout(
+                publicWeather.getForecastByAdm4(selectedAdm4.code),
+                300000,
               );
+
+              const parentNames = getParentNames(selectedAdm4.code);
 
               result = {
                 success: true,
@@ -1080,7 +1181,7 @@ mcp.post("/", async (c) => {
                 type: "forecast_by_adm1",
                 adm1: args.adm1,
                 selected_adm4: selectedAdm4.code,
-                province_name: selectedAdm4.parent_name || "Unknown Province",
+                province_name: parentNames.province_name,
                 data: forecastData,
                 metadata: {
                   generated: new Date().toISOString(),
@@ -1108,11 +1209,14 @@ mcp.post("/", async (c) => {
             id,
           });
         } catch (error) {
+          console.error(
+            `[MCP] Tool execution failed for ${name}: ${error instanceof Error ? error.message : String(error)}`,
+          );
           return c.json({
             jsonrpc: "2.0",
             error: {
               code: -32603,
-              message: `Tool execution failed: ${error.message}`,
+              message: `Tool execution failed: ${error instanceof Error ? error.message : String(error)}`,
             },
             id,
           });
@@ -1120,6 +1224,7 @@ mcp.post("/", async (c) => {
       }
 
       default:
+        console.warn(`[MCP] Unknown method: ${method}`);
         return c.json({
           jsonrpc: "2.0",
           error: { code: -32601, message: "Method not found" },
@@ -1127,7 +1232,9 @@ mcp.post("/", async (c) => {
         });
     }
   } catch (error) {
-    console.error("MCP request error:", error);
+    console.error(
+      `[MCP] Request processing failed: ${error instanceof Error ? error.message : String(error)}`,
+    );
     return c.json({
       jsonrpc: "2.0",
       error: { code: -32700, message: "Parse error" },

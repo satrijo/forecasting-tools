@@ -1,6 +1,7 @@
 # BMKG Weather API
 
 REST API untuk mengambil data cuaca dari BMKG Indonesia:
+
 - **AWS/ARG** - Data real-time dari stasiun cuaca otomatis
 - **Public Weather** - Data prakiraan cuaca publik (nowcasting, forecast)
 
@@ -34,6 +35,85 @@ REST API untuk mengambil data cuaca dari BMKG Indonesia:
 - **Monorepo**: Turborepo 2.6.3
 - **Language**: TypeScript
 - **Data Source**: BMKG AWS Center API
+- **MCP Protocol**: Model Context Protocol untuk AI assistants
+
+## 🤖 MCP (Model Context Protocol) Tools
+
+API ini juga menyediakan MCP server untuk integrasi dengan AI assistants seperti Claude, ChatGPT, atau tools lainnya yang mendukung MCP protocol.
+
+### MCP Endpoint
+
+```
+POST /mcp
+Content-Type: application/json
+```
+
+### Tersedia 12 MCP Tools:
+
+#### 1. `get_weather_by_province`
+
+Mendapatkan data stasiun cuaca terkini untuk semua stasiun otomatis dalam satu provinsi Indonesia.
+
+#### 2. `get_weather_by_city`
+
+Mencari stasiun cuaca berdasarkan nama kota dengan berbagai mode pencarian.
+
+#### 3. `get_weather_by_stations`
+
+Mengambil data cuaca dari stasiun-stasiun tertentu berdasarkan ID.
+
+#### 4. `get_weather_by_radius`
+
+Mencari stasiun cuaca dalam radius tertentu dari koordinat geografis.
+
+#### 5. `get_public_weather_warnings`
+
+Mendapatkan data peringatan dini cuaca ekstrem (nowcasting) dari seluruh Indonesia.
+
+#### 6. `get_weather_by_location`
+
+Mendapatkan data cuaca saat ini DAN prakiraan cuaca untuk lokasi tertentu.
+
+#### 7. `get_regional_codes`
+
+Mencari dan mendapatkan kode wilayah administrasi Indonesia (ADM1-4) untuk prakiraan cuaca.
+
+#### 8. `get_forecast_by_location`
+
+Mendapatkan prakiraan cuaca berdasarkan nama lokasi.
+
+#### 9. `get_forecast_by_adm4`
+
+Prakiraan cuaca untuk tingkat desa/kelurahan (ADM4).
+
+#### 10. `get_forecast_by_adm3`
+
+Prakiraan cuaca untuk tingkat kecamatan (ADM3).
+
+#### 11. `get_forecast_by_adm2`
+
+Prakiraan cuaca untuk tingkat kabupaten/kota (ADM2).
+
+#### 12. `get_forecast_by_adm1`
+
+Prakiraan cuaca untuk tingkat provinsi (ADM1).
+
+### Contoh Penggunaan MCP
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "tools/call",
+  "params": {
+    "name": "get_weather_by_province",
+    "arguments": {
+      "province": "PR013",
+      "type": "aws"
+    }
+  },
+  "id": 1
+}
+```
 
 ## 🚀 Setup
 
@@ -123,11 +203,11 @@ Mendapatkan data cuaca untuk **lokasi spesifik**.
 
 **Parameter (pilih salah satu):**
 
-| Parameter | Type | Description | Example |
-|-----------|------|-------------|---------|
-| `code` | string | Kode wilayah ADM4 | `33.01.22.1003` |
-| `lat` | number | Latitude koordinat | `-7.656747` |
-| `lon` | number | Longitude koordinat | `109.115523` |
+| Parameter | Type   | Description         | Example         |
+| --------- | ------ | ------------------- | --------------- |
+| `code`    | string | Kode wilayah ADM4   | `33.01.22.1003` |
+| `lat`     | number | Latitude koordinat  | `-7.656747`     |
+| `lon`     | number | Longitude koordinat | `109.115523`    |
 
 **Contoh:**
 
@@ -157,12 +237,12 @@ Mendapatkan data cuaca untuk **banyak lokasi** (bulk) dalam format GeoJSON.
 
 **Parameter:**
 
-| Parameter | Type | Description | Example |
-|-----------|------|-------------|---------|
-| `province` | string | Filter provinsi | `jawa_tengah` |
-| `kabupaten` | string | Filter kabupaten | `cilacap` |
-| `kecamatan` | string | Filter kecamatan | `cilacap_tengah` |
-| `format` | string | Output format: `geojson` (default) atau `json` | `geojson` |
+| Parameter   | Type   | Description                                    | Example          |
+| ----------- | ------ | ---------------------------------------------- | ---------------- |
+| `province`  | string | Filter provinsi                                | `jawa_tengah`    |
+| `kabupaten` | string | Filter kabupaten                               | `cilacap`        |
+| `kecamatan` | string | Filter kecamatan                               | `cilacap_tengah` |
+| `format`    | string | Output format: `geojson` (default) atau `json` | `geojson`        |
 
 **Contoh:**
 
@@ -183,11 +263,11 @@ Data nowcasting (prakiraan cuaca jangka pendek).
 
 **Parameter:**
 
-| Parameter | Type | Description | Example |
-|-----------|------|-------------|---------|
-| `type` | string | Sumber: `signature` (default), `xml`, `databmkg` | `signature` |
-| `code` | string | Kode stasiun (untuk type=signature) | `CJH` |
-| `province` | string | Nama provinsi (WAJIB untuk type=xml) | `jawa_tengah` |
+| Parameter  | Type   | Description                                      | Example       |
+| ---------- | ------ | ------------------------------------------------ | ------------- |
+| `type`     | string | Sumber: `signature` (default), `xml`, `databmkg` | `signature`   |
+| `code`     | string | Kode stasiun (untuk type=signature)              | `CJH`         |
+| `province` | string | Nama provinsi (WAJIB untuk type=xml)             | `jawa_tengah` |
 
 **Contoh:**
 
@@ -201,11 +281,11 @@ curl "http://localhost:3000/public/nowcasting?type=xml&province=jawa_tengah"
 
 ### Perbedaan `/public/location` vs `/public/weather`
 
-| | `/public/location` | `/public/weather` |
-|---|---|---|
-| **Data** | Satu lokasi spesifik | Banyak lokasi (bulk) |
-| **Format** | Raw JSON | GeoJSON FeatureCollection |
-| **Query** | code (ADM4) atau lat/lon | province, kabupaten, kecamatan |
+|              | `/public/location`       | `/public/weather`              |
+| ------------ | ------------------------ | ------------------------------ |
+| **Data**     | Satu lokasi spesifik     | Banyak lokasi (bulk)           |
+| **Format**   | Raw JSON                 | GeoJSON FeatureCollection      |
+| **Query**    | code (ADM4) atau lat/lon | province, kabupaten, kecamatan |
 | **Use case** | Detail cuaca satu tempat | Peta, visualisasi banyak titik |
 
 ## 🔧 Query Parameters
